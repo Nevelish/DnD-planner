@@ -1,0 +1,18 @@
+.rbc-event-proposed {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  border: 1px solid var(--border);
+}
+
+.rbc-event-confirmed {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.rbc-today {
+  background-color: var(--accent);
+}
+
+.rbc-off-range-bg {
+  background: var(--muted);
+}
