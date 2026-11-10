@@ -5,4 +5,4 @@ echo "Applying database migrations..."
 npx prisma migrate deploy
 
 echo "Starting server..."
-exec node server.js
+exec npx next start -p "${PORT:-3000}" -H "${HOSTNAME:-0.0.0.0}"
