@@ -1,0 +1,7 @@
+# Force LF line endings for files Docker/Linux need to execute or parse
+# literally, regardless of the cloning machine's git autocrlf setting
+# (Windows checkouts commonly convert these to CRLF, which breaks a
+# shebang line like `#!/bin/sh` inside a container).
+*.sh text eol=lf
+Dockerfile text eol=lf
+docker/entrypoint.sh text eol=lf

@@ -38,7 +38,12 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY docker/entrypoint.sh ./entrypoint.sh
-RUN chmod +x ./entrypoint.sh && chown -R nextjs:nodejs /app
+# Strip any CRLF line endings a Windows checkout may have introduced —
+# a CR before the shebang's newline makes the kernel look for a literal
+# "/bin/sh\r" interpreter, which fails with "no such file or directory".
+RUN sed -i 's/\r$//' ./entrypoint.sh \
+  && chmod +x ./entrypoint.sh \
+  && chown -R nextjs:nodejs /app
 
 USER nextjs
 
