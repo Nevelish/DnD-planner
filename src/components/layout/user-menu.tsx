@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { LogOutIcon, UserIcon } from "lucide-react";
+import { LogOutIcon, SettingsIcon, UserIcon } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -36,6 +37,12 @@ export function UserMenu({
             </span>
           )}
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/account">
+            <SettingsIcon /> Account settings
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"

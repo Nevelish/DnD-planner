@@ -17,7 +17,7 @@ export default async function NotificationsPage() {
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-6">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Notifications</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight">Notifications</h1>
         <MarkAllReadButton />
       </div>
 

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import { D20Icon } from "@/components/icons/d20-icon";
 
 export default async function HomePage() {
   const session = await auth();
@@ -10,8 +11,8 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-24 text-center">
-      <span className="text-5xl">🎲</span>
-      <h1 className="max-w-xl text-4xl font-semibold tracking-tight">
+      <D20Icon className="size-16 text-primary" strokeWidth={1} />
+      <h1 className="max-w-xl font-display text-4xl font-semibold tracking-tight">
         Run your campaigns. Keep your party in sync.
       </h1>
       <p className="max-w-lg text-muted-foreground">

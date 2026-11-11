@@ -33,7 +33,7 @@ export default async function CampaignOverviewPage({
     prisma.sessionProposal.findFirst({
       where: {
         campaignId,
-        status: "PROPOSED",
+        status: { in: ["PROPOSED", "CONFIRMED"] },
         startsAt: { gte: new Date() },
       },
       orderBy: { startsAt: "asc" },

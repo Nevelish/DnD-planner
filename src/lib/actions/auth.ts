@@ -5,7 +5,8 @@ import { AuthError } from "next-auth";
 
 import { prisma } from "@/lib/prisma";
 import { signIn } from "@/lib/auth";
-import { signUpSchema } from "@/lib/validations/auth";
+import { requireUserId } from "@/lib/permissions";
+import { changePasswordSchema, signUpSchema } from "@/lib/validations/auth";
 
 export type ActionResult = { error?: string; success?: boolean };
 
@@ -40,6 +41,39 @@ export async function signUpAction(
       success: true,
     };
   }
+
+  return { success: true };
+}
+
+export async function changePasswordAction(
+  _prev: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
+  const userId = await requireUserId();
+
+  const parsed = changePasswordSchema.safeParse({
+    currentPassword: formData.get("currentPassword"),
+    newPassword: formData.get("newPassword"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  if (!user.passwordHash) {
+    return {
+      error: "This account signs in with Discord and has no password to change.",
+    };
+  }
+
+  const isValid = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash);
+  if (!isValid) {
+    return { error: "Current password is incorrect." };
+  }
+
+  const passwordHash = await bcrypt.hash(parsed.data.newPassword, 10);
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
 
   return { success: true };
 }

@@ -31,7 +31,10 @@ export default async function DashboardPage() {
       campaign: {
         include: {
           sessionProposals: {
-            where: { status: "PROPOSED", startsAt: { gte: new Date() } },
+            where: {
+              status: { in: ["PROPOSED", "CONFIRMED"] },
+              startsAt: { gte: new Date() },
+            },
             orderBy: { startsAt: "asc" },
             take: 1,
           },
@@ -46,7 +49,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Dashboard</h1>
+      <h1 className="mb-6 font-display text-2xl font-semibold tracking-tight">Dashboard</h1>
 
       {memberships.length === 0 ? (
         <Card>

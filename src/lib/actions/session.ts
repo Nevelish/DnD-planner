@@ -11,7 +11,7 @@ function parseProposalForm(formData: FormData) {
   const parsed = proposalSchema.safeParse({
     title: formData.get("title"),
     startsAt: formData.get("startsAt"),
-    durationMinutes: formData.get("durationMinutes") || undefined,
+    endsAt: formData.get("endsAt") || undefined,
   });
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
