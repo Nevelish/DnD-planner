@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireMembershipForPage } from "@/lib/permissions";
 import { Badge } from "@/components/ui/badge";
-import { CampaignTabs } from "@/components/campaigns/campaign-tabs";
+import { TabNav } from "@/components/layout/tab-nav";
 
 export default async function CampaignLayout({
   children,
@@ -42,7 +42,7 @@ export default async function CampaignLayout({
           {isDM ? "DM" : "Player"}
         </Badge>
       </div>
-      <CampaignTabs tabs={tabs} />
+      <TabNav tabs={tabs} />
       {children}
     </div>
   );
