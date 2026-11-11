@@ -30,7 +30,7 @@ export function PublicUrlForm({ currentUrl }: { currentUrl: string }) {
           id="publicUrl"
           name="publicUrl"
           type="url"
-          placeholder="https://dnd.nevelish.tv"
+          placeholder="https://dnd.example.com"
           defaultValue={currentUrl}
           className="font-mono text-xs"
         />

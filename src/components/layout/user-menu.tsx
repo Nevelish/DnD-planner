@@ -48,7 +48,7 @@ export function UserMenu({
         {isAdmin && (
           <DropdownMenuItem asChild>
             <Link href="/admin/settings">
-              <ShieldIcon /> Admin settings
+              <ShieldIcon /> Admin panel
             </Link>
           </DropdownMenuItem>
         )}
