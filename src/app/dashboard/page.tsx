@@ -31,7 +31,10 @@ export default async function DashboardPage() {
       campaign: {
         include: {
           sessionProposals: {
-            where: { status: "PROPOSED", startsAt: { gte: new Date() } },
+            where: {
+              status: { in: ["PROPOSED", "CONFIRMED"] },
+              startsAt: { gte: new Date() },
+            },
             orderBy: { startsAt: "asc" },
             take: 1,
           },
