@@ -5,13 +5,9 @@ import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/layout/user-menu";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { SkinToggle } from "@/components/layout/skin-toggle";
+import { NavLinks } from "@/components/layout/nav-links";
 import { D20Icon } from "@/components/icons/d20-icon";
-
-const links = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/campaigns", label: "Campaigns" },
-  { href: "/calendar", label: "Calendar" },
-];
 
 export async function NavBar() {
   const session = await auth();
@@ -28,17 +24,10 @@ export async function NavBar() {
           DnD Planner
         </Link>
 
-        {user ? (
-          <nav className="hidden items-center gap-1 sm:flex">
-            {links.map((link) => (
-              <Button key={link.href} variant="ghost" asChild size="sm">
-                <Link href={link.href}>{link.label}</Link>
-              </Button>
-            ))}
-          </nav>
-        ) : null}
+        {user ? <NavLinks className="hidden items-center gap-1 sm:flex" /> : null}
 
         <div className="flex items-center gap-2">
+          <SkinToggle />
           <ThemeToggle />
           {user ? (
             <>
@@ -58,13 +47,7 @@ export async function NavBar() {
         </div>
       </div>
       {user ? (
-        <nav className="flex items-center gap-1 overflow-x-auto border-t px-4 py-1.5 sm:hidden">
-          {links.map((link) => (
-            <Button key={link.href} variant="ghost" asChild size="sm">
-              <Link href={link.href}>{link.label}</Link>
-            </Button>
-          ))}
-        </nav>
+        <NavLinks className="flex items-center gap-1 overflow-x-auto border-t px-4 py-1.5 sm:hidden" />
       ) : null}
     </header>
   );

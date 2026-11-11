@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { requireMembershipForPage } from "@/lib/permissions";
 import { Badge } from "@/components/ui/badge";
+import { CampaignTabs } from "@/components/campaigns/campaign-tabs";
 
 export default async function CampaignLayout({
   children,
@@ -42,17 +42,7 @@ export default async function CampaignLayout({
           {isDM ? "DM" : "Player"}
         </Badge>
       </div>
-      <nav className="mb-6 flex gap-1 overflow-x-auto border-b">
-        {tabs.map((tab) => (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className="whitespace-nowrap px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-          >
-            {tab.label}
-          </Link>
-        ))}
-      </nav>
+      <CampaignTabs tabs={tabs} />
       {children}
     </div>
   );

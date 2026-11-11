@@ -82,3 +82,217 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* ===================================================================
+   "NieR" skin — an alternate, user-selectable visual skin (see
+   src/lib/skin.ts / data-skin="nier" on <html>). Fully additive: the
+   Default skin above is completely untouched when data-skin is absent.
+   Sepia/monochrome palette, square corners, hard offset shadows,
+   corner-bracket frames, uppercase monospace UI text, inverted
+   hover/selected states — inspired by NevelishTV's own NieR skin.
+   =================================================================== */
+
+:root[data-skin="nier"] {
+  --color-white: #e8e2cc;
+  --color-slate-50: #dad4bb;
+  --color-slate-100: #cfc8ad;
+  --color-slate-200: #b8b096;
+  --color-slate-300: #a39b80;
+  --color-slate-400: #9b9480;
+  --color-slate-500: #6f6a5a;
+  --color-slate-600: #5d594d;
+  --color-slate-700: #4e4b42;
+  --color-slate-800: #3e3c35;
+  --color-slate-900: #34322c;
+  --color-slate-950: #2b2a25;
+  /* Both shades collapsed to the darker, WCAG-AA-passing value — the
+     lighter originals (#7a8a55 / #b08a3e) only hit ~3.2-3.75:1 against
+     Badge's fixed white text, short of 4.5:1 for small text. */
+  --color-emerald-500: #5f6d40;
+  --color-emerald-600: #5f6d40;
+  --color-amber-500: #8c6b2c;
+  --color-amber-600: #8c6b2c;
+  --color-red-500: #b2534a;
+  --color-red-600: #8f3f37;
+}
+
+:root[data-skin="nier"] {
+  --background: var(--color-slate-50);
+  --foreground: var(--color-slate-900);
+  --card: #e4dfc9;
+  --card-foreground: var(--color-slate-900);
+  --popover: var(--color-slate-50);
+  --popover-foreground: var(--color-slate-900);
+  --primary: var(--color-slate-700);
+  --primary-foreground: var(--color-white);
+  --secondary: var(--color-slate-100);
+  --secondary-foreground: var(--color-slate-900);
+  --muted: var(--color-slate-100);
+  /* slate-700, not slate-500/600 — those only land ~3.2-3.6:1 against
+     --muted/--background, short of WCAG AA's 4.5:1 for normal text. */
+  --muted-foreground: var(--color-slate-700);
+  --accent: var(--color-slate-200);
+  --accent-foreground: var(--color-slate-950);
+  --destructive: var(--color-red-500);
+  --destructive-foreground: var(--color-white);
+  --border: rgb(78 75 66 / 0.35);
+  --input: rgb(78 75 66 / 0.35);
+  --ring: var(--color-slate-700);
+  --radius: 0rem;
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-share-tech-mono);
+  --font-display: var(--font-share-tech-mono);
+}
+
+.dark[data-skin="nier"] {
+  --background: var(--color-slate-950);
+  --foreground: var(--color-slate-50);
+  --card: var(--color-slate-900);
+  --card-foreground: var(--color-slate-50);
+  --popover: var(--color-slate-950);
+  --popover-foreground: var(--color-slate-50);
+  --primary: var(--color-slate-50);
+  --primary-foreground: var(--color-slate-950);
+  --secondary: var(--color-slate-800);
+  --secondary-foreground: var(--color-slate-50);
+  --muted: var(--color-slate-800);
+  /* slate-200, not slate-300/400 — same WCAG AA reasoning as the light
+     mode muted-foreground above. */
+  --muted-foreground: var(--color-slate-200);
+  --accent: var(--color-slate-700);
+  --accent-foreground: var(--color-slate-50);
+  --destructive: #c96f64;
+  --destructive-foreground: var(--color-slate-950);
+  --border: rgb(218 212 187 / 0.22);
+  --input: rgb(218 212 187 / 0.22);
+  --ring: var(--color-slate-50);
+}
+
+/* Square corners everywhere. --radius: 0rem above covers token-derived
+   rounding; this blunt catch-all also covers the fixed rounded-full
+   utility used on the user-menu avatar and the notification-bell dot,
+   and is a safety net against calc(var(--radius) - 4px) going negative. */
+[data-skin="nier"] [class*="rounded"] {
+  border-radius: 0 !important;
+}
+
+/* Uppercase monospace UI text. */
+[data-skin="nier"] :is(
+  h1, h2, h3, legend,
+  [data-slot="button"],
+  [data-slot="card-title"],
+  [data-slot="dialog-title"],
+  [data-slot="label"],
+  [data-slot="badge"],
+  [data-slot="tabs-trigger"],
+  nav a,
+  header a
+) {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 400;
+}
+
+/* Hard double-line header border instead of the soft blurred one. */
+[data-skin="nier"] header {
+  box-shadow:
+    0 3px 0 0 var(--color-slate-50),
+    0 4px 0 0 rgb(78 75 66 / 0.35);
+}
+.dark[data-skin="nier"] header {
+  box-shadow:
+    0 3px 0 0 var(--color-slate-950),
+    0 4px 0 0 rgb(218 212 187 / 0.2);
+}
+
+/* Card "surface" treatment: flat fill, hard offset shadow, corner-bracket
+   HUD frame drawn via layered linear-gradient backgrounds. */
+[data-skin="nier"] [data-slot="card"] {
+  position: relative;
+  --frame: rgb(78 75 66 / 0.55);
+  background-color: #e4dfc9;
+  border: 1px solid rgb(78 75 66 / 0.35);
+  box-shadow: 4px 4px 0 rgb(78 75 66 / 0.15);
+}
+.dark[data-skin="nier"] [data-slot="card"] {
+  --frame: rgb(218 212 187 / 0.45);
+  background-color: var(--color-slate-900);
+  border-color: rgb(218 212 187 / 0.22);
+  box-shadow: 4px 4px 0 rgb(0 0 0 / 0.35);
+}
+[data-skin="nier"] [data-slot="card"]::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--frame), var(--frame)) top left / 10px 1px no-repeat,
+    linear-gradient(var(--frame), var(--frame)) top left / 1px 10px no-repeat,
+    linear-gradient(var(--frame), var(--frame)) top right / 10px 1px no-repeat,
+    linear-gradient(var(--frame), var(--frame)) top right / 1px 10px no-repeat,
+    linear-gradient(var(--frame), var(--frame)) bottom left / 10px 1px no-repeat,
+    linear-gradient(var(--frame), var(--frame)) bottom left / 1px 10px no-repeat,
+    linear-gradient(var(--frame), var(--frame)) bottom right / 10px 1px no-repeat,
+    linear-gradient(var(--frame), var(--frame)) bottom right / 1px 10px no-repeat;
+}
+
+/* Dialog "modal panel": flat fill, hard border, no blur/soft shadow. */
+[data-skin="nier"] [data-slot="dialog-content"] {
+  background-color: var(--color-slate-50) !important;
+  border: 1px solid rgb(78 75 66 / 0.4) !important;
+  box-shadow: 4px 4px 0 rgb(78 75 66 / 0.15) !important;
+}
+.dark[data-skin="nier"] [data-slot="dialog-content"] {
+  background-color: var(--color-slate-950) !important;
+  border-color: rgb(218 212 187 / 0.25) !important;
+  box-shadow: 4px 4px 0 rgb(0 0 0 / 0.35) !important;
+}
+
+/* Subtle graph-paper background texture. */
+[data-skin="nier"] body {
+  background-image:
+    radial-gradient(rgb(78 75 66 / 0.18) 1px, transparent 1.5px),
+    linear-gradient(rgb(78 75 66 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(78 75 66 / 0.06) 1px, transparent 1px);
+  background-size: 16px 16px, 64px 64px, 64px 64px;
+  background-repeat: repeat;
+}
+.dark[data-skin="nier"] body {
+  background-image:
+    radial-gradient(rgb(218 212 187 / 0.1) 1px, transparent 1.5px),
+    linear-gradient(rgb(218 212 187 / 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(218 212 187 / 0.04) 1px, transparent 1px);
+  background-size: 16px 16px, 64px 64px, 64px 64px;
+  background-repeat: repeat;
+}
+
+/* Inverted-fill selected states: active campaign/nav tabs and Radix
+   Tabs' own data-state="active" fill solid instead of using a soft
+   highlight. */
+[data-skin="nier"] [data-slot="tabs-trigger"][data-state="active"],
+[data-skin="nier"] .nav-link-active {
+  background: var(--color-slate-700) !important;
+  border-color: var(--color-slate-700) !important;
+  color: var(--color-white) !important;
+  box-shadow: none !important;
+}
+.dark[data-skin="nier"] [data-slot="tabs-trigger"][data-state="active"],
+.dark[data-skin="nier"] .nav-link-active {
+  background: var(--color-slate-50) !important;
+  border-color: var(--color-slate-50) !important;
+  color: var(--color-slate-950) !important;
+}
+
+/* Solid outline focus ring instead of the soft box-shadow ring —
+   box-shadow: none is required here, since Tailwind's focus-visible:ring-*
+   utilities compile to box-shadow, not outline, and would otherwise
+   render simultaneously alongside this outline. */
+[data-skin="nier"] :is(input, textarea, select, button, a):focus-visible {
+  box-shadow: none;
+  outline: 2px solid var(--color-slate-700);
+  outline-offset: 2px;
+}
+.dark[data-skin="nier"] :is(input, textarea, select, button, a):focus-visible {
+  outline-color: var(--color-slate-50);
+}
