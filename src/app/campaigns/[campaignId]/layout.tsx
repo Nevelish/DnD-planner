@@ -37,7 +37,7 @@ export default async function CampaignLayout({
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
       <div className="mb-4 flex items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{campaign.name}</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight">{campaign.name}</h1>
         <Badge variant={isDM ? "default" : "secondary"}>
           {isDM ? "DM" : "Player"}
         </Badge>

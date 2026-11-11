@@ -4,6 +4,8 @@ import { auth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/layout/user-menu";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { D20Icon } from "@/components/icons/d20-icon";
 
 const links = [
   { href: "/dashboard", label: "Dashboard" },
@@ -18,8 +20,12 @@ export async function NavBar() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-        <Link href={user ? "/dashboard" : "/"} className="font-semibold tracking-tight">
-          🎲 DnD Planner
+        <Link
+          href={user ? "/dashboard" : "/"}
+          className="flex items-center gap-2 font-display font-semibold tracking-tight"
+        >
+          <D20Icon className="size-5 text-primary" />
+          DnD Planner
         </Link>
 
         {user ? (
@@ -33,6 +39,7 @@ export async function NavBar() {
         ) : null}
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {user ? (
             <>
               <NotificationBell />

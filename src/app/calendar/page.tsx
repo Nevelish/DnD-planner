@@ -40,7 +40,7 @@ export default async function CalendarPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Calendar</h1>
+      <h1 className="mb-6 font-display text-2xl font-semibold tracking-tight">Calendar</h1>
       <CampaignCalendar sessions={sessions} />
     </div>
   );
