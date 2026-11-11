@@ -32,6 +32,7 @@ model User {
   proposedSessions SessionProposal[]  @relation("ProposedBy")
   notifications    Notification[]
   campaignNotes    CampaignNote[]
+  playerNotes      PlayerNote[]
   ownedCampaigns   Campaign[]         @relation("CampaignOwner")
 
   createdAt DateTime @default(now())
@@ -103,6 +104,7 @@ model Campaign {
   recurringRules   RecurringRule[]
   characters       Character[]
   notes            CampaignNote[]
+  playerNotes      PlayerNote[]
   notifications    Notification[]
 }
 
@@ -228,8 +230,14 @@ model Character {
 enum CampaignNoteType {
   GENERAL
   NEXT_SESSION_PREP
+  PARTY
 }
 
+/// DM-only notes (GENERAL, NEXT_SESSION_PREP) and the shared party note
+/// (PARTY, editable by any campaign member) — one row per type per
+/// campaign. Distinct from PlayerNote, which is one-per-member-private
+/// rather than campaign-wide, hence a separate model instead of a shared
+/// unique key.
 model CampaignNote {
   id         String           @id @default(cuid())
   campaignId String
@@ -243,6 +251,21 @@ model CampaignNote {
   author   User     @relation(fields: [authorId], references: [id])
 
   @@unique([campaignId, type])
+}
+
+/// A single private note per campaign member, visible only to them.
+model PlayerNote {
+  id         String   @id @default(cuid())
+  campaignId String
+  userId     String
+  content    String   @db.Text
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
 }
 
 enum NotificationType {

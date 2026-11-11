@@ -1,33 +1,42 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { upsertCampaignNote } from "@/lib/actions/notes";
+import { upsertCampaignNote, upsertPlayerNote } from "@/lib/actions/notes";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarkdownRenderer } from "@/components/notes/markdown-renderer";
+import { MarkdownToolbar } from "@/components/notes/markdown-toolbar";
 import type { CampaignNoteType } from "@prisma/client";
 
 export function NotesEditor({
   campaignId,
   type,
   initialContent,
+  placeholder,
 }: {
   campaignId: string;
-  type: CampaignNoteType;
+  /** Omit for the current user's own private note (PlayerNote). */
+  type?: CampaignNoteType;
   initialContent: string;
+  placeholder?: string;
 }) {
   const [content, setContent] = useState(initialContent);
   const [isPending, startTransition] = useTransition();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   function handleSave() {
     startTransition(async () => {
       try {
         const formData = new FormData();
         formData.set("content", content);
-        await upsertCampaignNote(campaignId, type, formData);
+        if (type) {
+          await upsertCampaignNote(campaignId, type, formData);
+        } else {
+          await upsertPlayerNote(campaignId, formData);
+        }
         toast.success("Saved.");
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Something went wrong.");
@@ -47,12 +56,14 @@ export function NotesEditor({
         </Button>
       </div>
       <TabsContent value="edit">
+        <MarkdownToolbar textareaRef={textareaRef} value={content} onChange={setContent} />
         <Textarea
+          ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           rows={14}
-          placeholder="Markdown supported — headings, lists, bold, links…"
-          className="font-mono text-sm"
+          placeholder={placeholder ?? "Markdown supported — headings, lists, bold, links…"}
+          className="rounded-t-none font-mono text-sm"
         />
       </TabsContent>
       <TabsContent value="preview">
