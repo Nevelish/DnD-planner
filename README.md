@@ -11,18 +11,22 @@ import, and in-app notifications.
 - **Sign in** with email/password or Discord.
 - **Per-campaign roles** — the same account can DM one campaign and play in
   another.
-- **Campaigns**: create, invite players via a shareable link, join/leave.
+- **Campaigns**: create, invite players via a shareable link or invite code
+  (paste either into "Join campaign"), join/leave.
 - **Sessions & RSVP**: the DM proposes a date, players respond Yes/No. Backing
   out after saying Yes asks for a quick reason, visible to the whole party.
 - **Recurring sessions**: set a cadence (e.g. every other Saturday) and the
   app drafts the next date ahead of time for the DM to review and send.
 - **Calendar**: a month view of every proposed/confirmed session across your
-  campaigns.
+  campaigns, plus a private .ics subscription feed (Outlook/Google/Apple
+  Calendar) that stays in sync as sessions change.
 - **Roster**: each player's character (name/class/level/race), with an
   optional best-effort import from a public D&D Beyond sheet.
 - **DM notes & session prep**: private markdown notes, visible only to the DM.
 - **Notifications**: in-app bell + full history for invites, proposals,
   cancellations, and RSVP changes.
+- **Account settings**: change your password (email/password accounts only).
+- **Dark mode**: light/dark/system, toggle in the nav.
 
 ## Stack
 
