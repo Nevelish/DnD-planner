@@ -27,6 +27,12 @@ import, and in-app notifications.
   cancellations, and RSVP changes.
 - **Account settings**: change your password (email/password accounts only).
 - **Dark mode**: light/dark/system, toggle in the nav.
+- **Admin panel**: the first person to ever sign in becomes admin
+  automatically — no setup step or env var needed. Admins can set the
+  server's public URL (so invite/calendar links don't show `localhost`
+  behind a reverse proxy or tunnel), create accounts, promote/demote other
+  admins, disable/re-enable accounts, and reset a forgotten password for
+  any email/password account — all without needing an email server.
 
 ## Stack
 
@@ -52,6 +58,33 @@ Next.js (App Router, TypeScript) + Tailwind, Prisma + PostgreSQL, Auth.js
 
    The app runs database migrations automatically on startup and is then
    available at [http://localhost:3000](http://localhost:3000).
+
+## Running on TrueNAS SCALE
+
+On SCALE 24.10 ("Electric Eel") or newer, Apps runs on a native Docker
+backend, so you can deploy via **Apps → Discover Apps → Custom App →
+Install via YAML** using `docker-compose.truenas.yml` instead of
+`docker-compose.yml`. The difference: it pulls a prebuilt image from GHCR
+rather than building `docker/Dockerfile` locally, since the Apps YAML
+importer deploys images, it doesn't build them.
+
+1. Push to `main` (or run the "Publish Docker image" workflow manually) —
+   `.github/workflows/docker-publish.yml` builds and pushes the image to
+   `ghcr.io/nevelish/dnd-planner` automatically. If the package ends up
+   private (the default for a private repo), either make it public from the
+   package's GitHub settings, or `docker login ghcr.io` on the TrueNAS host
+   with a PAT that has `read:packages`.
+2. Create a dataset for Postgres's data, e.g. `tank/apps/dnd-planner/pgdata`,
+   so it's visible to TrueNAS's own snapshot/backup tooling instead of
+   living in a Docker-managed volume.
+3. Copy `docker-compose.truenas.yml`, fill in every `REPLACE_ME` (secrets,
+   the dataset path, and `NEXTAUTH_URL` — your public domain, e.g. a
+   Cloudflare Tunnel hostname), and paste it into the Custom App YAML editor.
+4. Point your reverse proxy / tunnel at the TrueNAS host's IP on the port
+   you mapped (`3000` by default).
+5. Sign in once — since no admin exists yet, you become the admin
+   automatically — then set the same public address in `/admin/settings` →
+   Public URL, so invite and calendar links use it instead of `localhost`.
 
 ## Local development (without Docker for the app)
 

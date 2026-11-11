@@ -1,0 +1,52 @@
+# Compose file for deploying on TrueNAS SCALE (24.10 "Electric Eel" or
+# newer, which runs Apps on a native Docker backend) via Apps -> Discover
+# Apps -> Custom App -> Install via YAML.
+#
+# Unlike docker-compose.yml, this pulls a prebuilt image from GHCR instead
+# of building docker/Dockerfile locally — the Apps YAML importer deploys
+# images, it doesn't build them. The image is published automatically by
+# .github/workflows/docker-publish.yml on every push to main. If the GHCR
+# package ends up private (the default for a private repo), either make it
+# public from the package's GitHub settings, or `docker login ghcr.io` on
+# the TrueNAS host with a PAT that has `read:packages`.
+#
+# Before pasting this into the Apps UI:
+#   - Replace every REPLACE_ME value below.
+#   - Generate NEXTAUTH_SECRET with: openssl rand -base64 32
+#   - Set NEXTAUTH_URL to your Cloudflare Tunnel domain, and set the same
+#     address as the admin panel's "Public URL" (/admin/settings) once the
+#     app is up, so invite/calendar links use it instead of localhost.
+#   - Point the postgres volume at a real TrueNAS dataset (e.g.
+#     /mnt/tank/apps/dnd-planner/pgdata) rather than a Docker-managed
+#     volume, so it's visible to TrueNAS's own snapshot/backup tooling.
+
+services:
+  app:
+    image: ghcr.io/nevelish/dnd-planner:latest
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://dnd:REPLACE_ME@postgres:5432/dnd_planner
+      NEXTAUTH_SECRET: REPLACE_ME
+      NEXTAUTH_URL: https://REPLACE_ME.yourdomain.tld
+      # DISCORD_CLIENT_ID: REPLACE_ME
+      # DISCORD_CLIENT_SECRET: REPLACE_ME
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: dnd
+      POSTGRES_PASSWORD: REPLACE_ME
+      POSTGRES_DB: dnd_planner
+    volumes:
+      - /mnt/REPLACE_ME/apps/dnd-planner/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dnd -d dnd_planner"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
