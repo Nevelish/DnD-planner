@@ -18,7 +18,11 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
-# ---- runner: slim production image ----
+# ---- runner: production image ----
+# Copies the full node_modules tree (rather than Next's standalone trace)
+# so the Prisma CLI's own dependency graph — never imported by the app
+# itself, so Next's tracer doesn't pick it up — is always complete, with
+# every package's .bin symlinks intact for relative-asset resolution.
 FROM base AS runner
 RUN apk add --no-cache openssl
 WORKDIR /app
@@ -27,19 +31,14 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/tsx ./node_modules/tsx
-COPY --from=builder /app/node_modules/.bin/tsx ./node_modules/.bin/tsx
-COPY --from=builder /app/node_modules/dotenv ./node_modules/dotenv
 COPY docker/entrypoint.sh ./entrypoint.sh
-RUN chmod +x ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh && chown -R nextjs:nodejs /app
 
 USER nextjs
 

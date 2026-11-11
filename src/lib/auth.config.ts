@@ -5,6 +5,10 @@ import type { NextAuthConfig } from "next-auth";
 // extends this with the adapter and providers for use in server
 // components/actions and the route handler.
 export const authConfig = {
+  // Self-hosted behind a reverse proxy, port-forward, or Docker's own
+  // network address translation means the request's Host header won't
+  // always match NEXTAUTH_URL exactly — trust it rather than reject.
+  trustHost: true,
   pages: {
     signIn: "/signin",
     error: "/error",
