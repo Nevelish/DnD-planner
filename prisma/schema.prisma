@@ -9,6 +9,11 @@ datasource db {
 
 // ---------- Auth.js required models ----------
 
+enum UserRole {
+  ADMIN
+  USER
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -17,6 +22,7 @@ model User {
   image         String?
   passwordHash  String? // null for Discord-only accounts
   calendarToken String?   @unique // secret token for the .ics subscription feed
+  role          UserRole  @default(USER)
 
   accounts Account[]
   sessions Session[]
@@ -64,6 +70,14 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+/// Single-row table of server-wide settings, managed from /admin/settings.
+/// Always read/written at the fixed id "default" — there is only ever one row.
+model AppSettings {
+  id        String   @id @default("default")
+  publicUrl String? // overrides NEXTAUTH_URL for building absolute links (invites, calendar feed)
+  updatedAt DateTime @updatedAt
 }
 
 // ---------- Core domain ----------

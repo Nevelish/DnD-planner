@@ -50,6 +50,17 @@ export async function requireDM(campaignId: string) {
   return membership;
 }
 
+export async function requireAdmin(): Promise<string> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new PermissionError("You must be signed in.");
+  }
+  if (session.user.role !== "ADMIN") {
+    throw new PermissionError("Only an admin can do that.");
+  }
+  return session.user.id;
+}
+
 // ---------- Page guards (redirect/404, for Server Components) ----------
 
 export async function requireMembershipForPage(campaignId: string) {
@@ -63,4 +74,11 @@ export async function requireDMForPage(campaignId: string) {
   const { userId, membership } = await requireMembershipForPage(campaignId);
   if (membership.role !== "DM") notFound();
   return { userId, membership };
+}
+
+export async function requireAdminForPage() {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/signin");
+  if (session.user.role !== "ADMIN") notFound();
+  return { userId: session.user.id };
 }

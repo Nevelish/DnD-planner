@@ -32,7 +32,11 @@ export async function NavBar() {
           {user ? (
             <>
               <NotificationBell />
-              <UserMenu name={user.name} email={user.email} />
+              <UserMenu
+                name={user.name}
+                email={user.email}
+                isAdmin={user.role === "ADMIN"}
+              />
             </>
           ) : (
             <>

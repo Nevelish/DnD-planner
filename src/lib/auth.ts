@@ -4,6 +4,8 @@ import Discord from "next-auth/providers/discord";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 
+import type { UserRole } from "@prisma/client";
+
 import { prisma } from "@/lib/prisma";
 import { credentialsSchema } from "@/lib/validations/auth";
 import { authConfig } from "@/lib/auth.config";
@@ -49,15 +51,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     ...authConfig.callbacks,
+    async signIn({ user }) {
+      // Self-hosted bootstrap: whoever first successfully signs in becomes
+      // the admin, so there's no separate setup step or env var needed.
+      // A no-op once any admin exists.
+      if (user.id) {
+        const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+        if (adminCount === 0) {
+          await prisma.user.update({ where: { id: user.id }, data: { role: "ADMIN" } });
+        }
+      }
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { role: true },
+        });
+        token.role = dbUser?.role ?? "USER";
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string;
+        session.user.role = (token.role as UserRole | undefined) ?? "USER";
       }
       return session;
     },

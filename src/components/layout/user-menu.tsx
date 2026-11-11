@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { LogOutIcon, SettingsIcon, UserIcon } from "lucide-react";
+import { LogOutIcon, SettingsIcon, ShieldIcon, UserIcon } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -17,9 +17,11 @@ import { Button } from "@/components/ui/button";
 export function UserMenu({
   name,
   email,
+  isAdmin,
 }: {
   name?: string | null;
   email?: string | null;
+  isAdmin?: boolean;
 }) {
   return (
     <DropdownMenu>
@@ -43,6 +45,13 @@ export function UserMenu({
             <SettingsIcon /> Account settings
           </Link>
         </DropdownMenuItem>
+        {isAdmin && (
+          <DropdownMenuItem asChild>
+            <Link href="/admin/settings">
+              <ShieldIcon /> Admin settings
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
