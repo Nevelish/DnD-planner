@@ -11,18 +11,17 @@ import { Input } from "@/components/ui/input";
 export function InviteCodeBox({
   campaignId,
   inviteCode,
+  origin,
 }: {
   campaignId: string;
   inviteCode: string;
+  origin: string;
 }) {
   const [code, setCode] = useState(inviteCode);
   const [copied, setCopied] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const inviteUrl =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/invite/${code}`
-      : `/invite/${code}`;
+  const inviteUrl = `${origin}/invite/${code}`;
 
   function copy() {
     navigator.clipboard.writeText(inviteUrl).then(() => {
