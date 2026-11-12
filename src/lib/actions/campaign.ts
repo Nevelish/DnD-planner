@@ -6,8 +6,9 @@ import { nanoid } from "nanoid";
 
 import { prisma } from "@/lib/prisma";
 import { requireUserId, requireDM, requireMember } from "@/lib/permissions";
-import { campaignSchema } from "@/lib/validations/campaign";
+import { campaignSchema, discordWebhookUrlSchema } from "@/lib/validations/campaign";
 import { createNotification } from "@/lib/notifications";
+import { postToDiscordWebhook } from "@/lib/discordWebhook";
 
 export async function createCampaign(formData: FormData) {
   const userId = await requireUserId();
@@ -149,4 +150,42 @@ export async function removeMember(campaignId: string, memberId: string) {
 
   await prisma.campaignMember.delete({ where: { id: memberId } });
   revalidatePath(`/campaigns/${campaignId}/members`);
+}
+
+export async function updateCampaignDiscordWebhook(campaignId: string, formData: FormData) {
+  await requireDM(campaignId);
+
+  const parsed = discordWebhookUrlSchema.safeParse({
+    discordWebhookUrl: formData.get("discordWebhookUrl"),
+  });
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
+  }
+
+  await prisma.campaign.update({
+    where: { id: campaignId },
+    data: { discordWebhookUrl: parsed.data.discordWebhookUrl || null },
+  });
+
+  revalidatePath(`/campaigns/${campaignId}/settings`);
+}
+
+export async function testCampaignDiscordWebhook(campaignId: string) {
+  await requireDM(campaignId);
+
+  const campaign = await prisma.campaign.findUniqueOrThrow({
+    where: { id: campaignId },
+    select: { name: true, discordWebhookUrl: true },
+  });
+  if (!campaign.discordWebhookUrl) {
+    throw new Error("Add a webhook URL and save it first.");
+  }
+
+  const ok = await postToDiscordWebhook(campaign.discordWebhookUrl, {
+    title: "Test notification",
+    body: `This is what ${campaign.name}'s notifications will look like here.`,
+  });
+  if (!ok) {
+    throw new Error("Discord rejected that webhook URL. Double-check it was copied correctly.");
+  }
 }
