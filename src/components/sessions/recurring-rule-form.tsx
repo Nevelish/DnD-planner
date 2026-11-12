@@ -28,6 +28,15 @@ function minutesToTimeInput(minutes: number) {
   return `${h}:${m}`;
 }
 
+/** Day-of-week (0=Sunday..6=Saturday) of a "YYYY-MM-DD" input value, read as
+ * a local calendar date rather than UTC midnight (which `new Date(str)`
+ * would do and could shift the day in some timezones). */
+function dayOfWeekFromDateInput(value: string): number | null {
+  const [y, m, d] = value.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d).getDay();
+}
+
 export function RecurringRuleForm({
   campaignId,
   rule,
@@ -36,9 +45,13 @@ export function RecurringRuleForm({
   rule: RecurringRule | null;
 }) {
   const [dayOfWeek, setDayOfWeek] = useState(String(rule?.dayOfWeek ?? 1));
+  const [dayOfWeekTouched, setDayOfWeekTouched] = useState(false);
   const [intervalWeeks, setIntervalWeeks] = useState(String(rule?.intervalWeeks ?? 2));
   const [leadTimeDays, setLeadTimeDays] = useState(String(rule?.leadTimeDays ?? 14));
   const [leadTimeTouched, setLeadTimeTouched] = useState(false);
+  const [anchorDate, setAnchorDate] = useState(
+    rule ? new Date(rule.anchorDate).toISOString().slice(0, 10) : "",
+  );
   const [isPending, startTransition] = useTransition();
 
   function handleIntervalChange(value: string) {
@@ -56,20 +69,38 @@ export function RecurringRuleForm({
     setLeadTimeTouched(true);
   }
 
+  function handleDayOfWeekChange(value: string) {
+    setDayOfWeek(value);
+    setDayOfWeekTouched(true);
+  }
+
+  /** Picking the first-occurrence date updates "Day of week" to match it,
+   * so the two fields can't silently disagree (e.g. anchor date is a
+   * Friday but the selector still says Monday, which would shift every
+   * computed occurrence — including the first one — onto Mondays). A
+   * manual day-of-week pick afterward still overrides this. */
+  function handleAnchorDateChange(value: string) {
+    setAnchorDate(value);
+    if (!dayOfWeekTouched) {
+      const computed = dayOfWeekFromDateInput(value);
+      if (computed !== null) {
+        setDayOfWeek(String(computed));
+      }
+    }
+  }
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
-    const anchorDateStr = (form.elements.namedItem("anchorDateInput") as HTMLInputElement)
-      .value;
     const timeStr = (form.elements.namedItem("timeOfDayInput") as HTMLInputElement)
       .value;
-    if (!anchorDateStr || !timeStr) return;
+    if (!anchorDate || !timeStr) return;
 
     const [hours, minutes] = timeStr.split(":").map(Number);
     const timeOfDayMinutes = hours * 60 + minutes;
 
     const formData = new FormData(form);
-    formData.set("anchorDate", `${anchorDateStr}T${timeStr}:00`);
+    formData.set("anchorDate", `${anchorDate}T${timeStr}:00`);
     formData.set("timeOfDayMinutes", String(timeOfDayMinutes));
     formData.set("dayOfWeek", dayOfWeek);
     formData.set(
@@ -124,7 +155,7 @@ export function RecurringRuleForm({
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="dayOfWeek">Day of week</Label>
-            <Select value={dayOfWeek} onValueChange={setDayOfWeek}>
+            <Select value={dayOfWeek} onValueChange={handleDayOfWeekChange}>
               <SelectTrigger id="dayOfWeek">
                 <SelectValue />
               </SelectTrigger>
@@ -173,11 +204,8 @@ export function RecurringRuleForm({
             id="anchorDateInput"
             name="anchorDateInput"
             type="date"
-            defaultValue={
-              rule
-                ? new Date(rule.anchorDate).toISOString().slice(0, 10)
-                : undefined
-            }
+            value={anchorDate}
+            onChange={(e) => handleAnchorDateChange(e.target.value)}
             required
           />
         </div>
