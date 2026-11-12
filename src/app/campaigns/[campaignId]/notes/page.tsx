@@ -20,9 +20,11 @@ export default async function NotesPage({
 
   const [notes, playerNote] = await Promise.all([
     prisma.campaignNote.findMany({ where: { campaignId } }),
-    prisma.playerNote.findUnique({
-      where: { campaignId_userId: { campaignId, userId } },
-    }),
+    isDM
+      ? Promise.resolve(null)
+      : prisma.playerNote.findUnique({
+          where: { campaignId_userId: { campaignId, userId } },
+        }),
   ]);
 
   const general = notes.find((n) => n.type === "GENERAL")?.content ?? "";
@@ -76,19 +78,21 @@ export default async function NotesPage({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>My notes</CardTitle>
-          <CardDescription>Private — only you can see this.</CardDescription>
-        </CardHeader>
-        <CardContent className="pb-6">
-          <NotesEditor
-            campaignId={campaignId}
-            initialContent={playerNote?.content ?? ""}
-            placeholder="Personal notes just for you…"
-          />
-        </CardContent>
-      </Card>
+      {!isDM && (
+        <Card>
+          <CardHeader>
+            <CardTitle>My notes</CardTitle>
+            <CardDescription>Private — only you can see this.</CardDescription>
+          </CardHeader>
+          <CardContent className="pb-6">
+            <NotesEditor
+              campaignId={campaignId}
+              initialContent={playerNote?.content ?? ""}
+              placeholder="Personal notes just for you…"
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
