@@ -1,3 +1,5 @@
+![DnD Planner](.github/banner.svg)
+
 # DnD Planner
 
 A self-hosted D&D campaign planner: DMs run campaigns with private notes and
