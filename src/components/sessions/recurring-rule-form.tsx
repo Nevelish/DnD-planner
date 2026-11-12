@@ -7,7 +7,7 @@ import {
   upsertRecurringRule,
   deactivateRecurringRule,
 } from "@/lib/actions/recurringRule";
-import { DAYS_OF_WEEK } from "@/lib/validations/recurringRule";
+import { DAYS_OF_WEEK, WEEK_DISPLAY_ORDER } from "@/lib/validations/recurringRule";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,8 +35,26 @@ export function RecurringRuleForm({
   campaignId: string;
   rule: RecurringRule | null;
 }) {
-  const [dayOfWeek, setDayOfWeek] = useState(String(rule?.dayOfWeek ?? 6));
+  const [dayOfWeek, setDayOfWeek] = useState(String(rule?.dayOfWeek ?? 1));
+  const [intervalWeeks, setIntervalWeeks] = useState(String(rule?.intervalWeeks ?? 2));
+  const [leadTimeDays, setLeadTimeDays] = useState(String(rule?.leadTimeDays ?? 14));
+  const [leadTimeTouched, setLeadTimeTouched] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  function handleIntervalChange(value: string) {
+    setIntervalWeeks(value);
+    if (!leadTimeTouched) {
+      const weeks = Number(value);
+      if (Number.isFinite(weeks) && weeks > 0) {
+        setLeadTimeDays(String(Math.min(60, weeks * 7)));
+      }
+    }
+  }
+
+  function handleLeadTimeChange(value: string) {
+    setLeadTimeDays(value);
+    setLeadTimeTouched(true);
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -99,7 +117,8 @@ export function RecurringRuleForm({
               type="number"
               min={1}
               max={52}
-              defaultValue={rule?.intervalWeeks ?? 2}
+              value={intervalWeeks}
+              onChange={(e) => handleIntervalChange(e.target.value)}
               required
             />
           </div>
@@ -110,9 +129,9 @@ export function RecurringRuleForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {DAYS_OF_WEEK.map((day, i) => (
-                  <SelectItem key={day} value={String(i)}>
-                    {day}
+                {WEEK_DISPLAY_ORDER.map((i) => (
+                  <SelectItem key={i} value={String(i)}>
+                    {DAYS_OF_WEEK[i]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -141,7 +160,8 @@ export function RecurringRuleForm({
               type="number"
               min={1}
               max={60}
-              defaultValue={rule?.leadTimeDays ?? 14}
+              value={leadTimeDays}
+              onChange={(e) => handleLeadTimeChange(e.target.value)}
               required
             />
           </div>

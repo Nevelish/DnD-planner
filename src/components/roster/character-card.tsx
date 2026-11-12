@@ -1,3 +1,5 @@
+import { ExternalLinkIcon } from "lucide-react";
+
 import {
   Card,
   CardContent,
@@ -6,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { CharacterForm } from "@/components/roster/character-form";
 import { DeleteCharacterButton } from "@/components/roster/delete-character-button";
 import { DndBeyondLinkField } from "@/components/roster/dndbeyond-link-field";
@@ -55,6 +58,13 @@ export function CharacterCard({
           <p className="whitespace-pre-wrap text-sm text-muted-foreground">
             {character.notes}
           </p>
+        )}
+        {character.dndBeyondUrl && (
+          <Button variant="outline" size="sm" className="w-fit" asChild>
+            <a href={character.dndBeyondUrl} target="_blank" rel="noopener noreferrer">
+              <ExternalLinkIcon /> Open on D&amp;D Beyond
+            </a>
+          </Button>
         )}
         {isOwn ? (
           <DndBeyondLinkField
