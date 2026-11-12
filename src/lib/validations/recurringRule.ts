@@ -11,6 +11,8 @@ export const recurringRuleSchema = z.object({
 
 export type RecurringRuleInput = z.infer<typeof recurringRuleSchema>;
 
+// Index = the real day-of-week value (matches JS's Date#getDay(), which the
+// scheduling engine in lib/recurring.ts relies on) — don't reorder this.
 export const DAYS_OF_WEEK = [
   "Sunday",
   "Monday",
@@ -20,3 +22,7 @@ export const DAYS_OF_WEEK = [
   "Friday",
   "Saturday",
 ] as const;
+
+// Monday-first display order for the day-of-week picker. Purely a UI
+// rendering order — values are still the real DAYS_OF_WEEK indices above.
+export const WEEK_DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;

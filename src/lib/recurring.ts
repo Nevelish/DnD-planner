@@ -5,6 +5,10 @@ import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications";
 
+// Matches ProposeSessionDialog's own default, used when there's no prior
+// session on this rule yet to carry a duration forward from.
+const DEFAULT_DURATION_MINUTES = 180;
+
 /** The next date/time matching dayOfWeek + timeOfDayMinutes on/after `base`, in `timezone`. */
 function computeOccurrenceOnOrAfter(
   base: Date,
@@ -76,6 +80,7 @@ export async function ensureUpcomingProposals(campaignId: string) {
       campaignId,
       proposedById: rule.campaign.ownerId,
       startsAt: nextOccurrence,
+      durationMinutes: lastProposal?.durationMinutes ?? DEFAULT_DURATION_MINUTES,
       status: "DRAFT",
       recurringRuleId: rule.id,
     },
