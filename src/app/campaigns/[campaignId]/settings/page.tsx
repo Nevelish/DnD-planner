@@ -3,6 +3,7 @@ import { requireDMForPage } from "@/lib/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditCampaignForm } from "@/components/campaigns/edit-campaign-form";
 import { DeleteCampaignButton } from "@/components/campaigns/delete-campaign-button";
+import { DiscordWebhookForm } from "@/components/campaigns/discord-webhook-form";
 import { RecurringRuleForm } from "@/components/sessions/recurring-rule-form";
 
 export default async function CampaignSettingsPage({
@@ -41,6 +42,18 @@ export default async function CampaignSettingsPage({
         </CardHeader>
         <CardContent className="pb-6">
           <RecurringRuleForm campaignId={campaignId} rule={recurringRule} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Discord notifications</CardTitle>
+        </CardHeader>
+        <CardContent className="pb-6">
+          <DiscordWebhookForm
+            campaignId={campaignId}
+            discordWebhookUrl={campaign.discordWebhookUrl}
+          />
         </CardContent>
       </Card>
 

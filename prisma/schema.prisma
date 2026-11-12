@@ -90,13 +90,14 @@ enum CampaignRole {
 }
 
 model Campaign {
-  id          String   @id @default(cuid())
-  name        String
-  description String?  @db.Text
-  ownerId     String
-  inviteCode  String   @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(cuid())
+  name              String
+  description       String?  @db.Text
+  ownerId           String
+  inviteCode        String   @unique
+  discordWebhookUrl String? // posts campaign notifications (session proposed/cancelled, RSVP, etc.) to Discord
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   owner            User              @relation("CampaignOwner", fields: [ownerId], references: [id])
   members          CampaignMember[]
