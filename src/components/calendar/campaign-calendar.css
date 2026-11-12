@@ -16,3 +16,32 @@
 .rbc-off-range-bg {
   background: var(--muted);
 }
+
+/* react-big-calendar's own toolbar button styles are hardcoded light-mode
+   colors (#373a3c text, #ccc border) that don't account for dark mode at
+   all — on a dark page background they're nearly invisible. Reskin with
+   the app's own tokens so Today/Back/Next stay legible in every
+   skin/color-mode combination. */
+.rbc-toolbar button {
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+.rbc-toolbar button:hover,
+.rbc-toolbar button:focus {
+  color: var(--accent-foreground);
+  background-color: var(--accent);
+  border-color: var(--border);
+}
+
+.rbc-toolbar button:active,
+.rbc-toolbar button.rbc-active,
+.rbc-toolbar button:active:hover,
+.rbc-toolbar button:active:focus,
+.rbc-toolbar button.rbc-active:hover,
+.rbc-toolbar button.rbc-active:focus {
+  color: var(--accent-foreground);
+  background-color: var(--muted);
+  border-color: var(--border);
+  box-shadow: none;
+}
