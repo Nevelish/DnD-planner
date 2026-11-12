@@ -5,23 +5,25 @@ import { getRequestOrigin } from "@/lib/requestOrigin";
 import type { NotificationType } from "@prisma/client";
 
 /** Mirrors whatever just got written to the in-app Notification to the
- * campaign's Discord webhook, if one is configured. Looked up here rather
- * than at each of the call sites below, so every event that already
- * creates an in-app notification — current and future — gets Discord
- * support for free. Fire-and-forget: the webhook POST itself isn't
+ * campaign's Discord webhook, if one is configured AND this event type is
+ * one the DM has it set to post (per-campaign, in Settings). Looked up
+ * here rather than at each of the call sites below, so every event that
+ * already creates an in-app notification — current and future — gets
+ * Discord support for free. Fire-and-forget: the webhook POST itself isn't
  * awaited, so a slow or unreachable Discord never adds latency to the
  * action that triggered it. */
 async function notifyDiscord(
   campaignId: string | null | undefined,
-  input: { title: string; body?: string; link?: string },
+  input: { type: NotificationType; title: string; body?: string; link?: string },
 ) {
   if (!campaignId) return;
 
   const campaign = await prisma.campaign.findUnique({
     where: { id: campaignId },
-    select: { discordWebhookUrl: true },
+    select: { discordWebhookUrl: true, discordWebhookEvents: true },
   });
   if (!campaign?.discordWebhookUrl) return;
+  if (!campaign.discordWebhookEvents.includes(input.type)) return;
 
   const origin = await getRequestOrigin();
   void postToDiscordWebhook(campaign.discordWebhookUrl, {

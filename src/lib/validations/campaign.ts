@@ -19,7 +19,31 @@ export type CampaignInput = z.infer<typeof campaignSchema>;
 const DISCORD_WEBHOOK_URL_PATTERN =
   /^https:\/\/(?:canary\.|ptb\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+\/?$/;
 
-export const discordWebhookUrlSchema = z.object({
+// Event types a campaign's Discord webhook can be toggled on/off for.
+// CAMPAIGN_INVITE isn't included — nothing in the app sends that type yet,
+// so there's nothing meaningful to toggle for it.
+export const DISCORD_WEBHOOK_EVENT_TYPES = [
+  "SESSION_PROPOSED",
+  "SESSION_CANCELLED",
+  "RSVP_CHANGED",
+  "MEMBER_JOINED",
+  "MEMBER_LEFT",
+  "RECURRING_DRAFT_READY",
+] as const;
+
+export const DISCORD_WEBHOOK_EVENT_LABELS: Record<
+  (typeof DISCORD_WEBHOOK_EVENT_TYPES)[number],
+  string
+> = {
+  SESSION_PROPOSED: "New session proposed",
+  SESSION_CANCELLED: "Session cancelled",
+  RSVP_CHANGED: "RSVP updated",
+  MEMBER_JOINED: "Player joined",
+  MEMBER_LEFT: "Player left",
+  RECURRING_DRAFT_READY: "Recurring draft ready",
+};
+
+export const discordWebhookSettingsSchema = z.object({
   discordWebhookUrl: z
     .string()
     .trim()
@@ -31,4 +55,5 @@ export const discordWebhookUrlSchema = z.object({
           "Enter a Discord webhook URL (from a channel's Integrations → Webhooks settings), or leave blank to turn this off.",
       },
     ),
+  discordWebhookEvents: z.array(z.enum(DISCORD_WEBHOOK_EVENT_TYPES)),
 });

@@ -6,7 +6,7 @@ import { nanoid } from "nanoid";
 
 import { prisma } from "@/lib/prisma";
 import { requireUserId, requireDM, requireMember } from "@/lib/permissions";
-import { campaignSchema, discordWebhookUrlSchema } from "@/lib/validations/campaign";
+import { campaignSchema, discordWebhookSettingsSchema } from "@/lib/validations/campaign";
 import { createNotification } from "@/lib/notifications";
 import { postToDiscordWebhook } from "@/lib/discordWebhook";
 
@@ -155,8 +155,9 @@ export async function removeMember(campaignId: string, memberId: string) {
 export async function updateCampaignDiscordWebhook(campaignId: string, formData: FormData) {
   await requireDM(campaignId);
 
-  const parsed = discordWebhookUrlSchema.safeParse({
+  const parsed = discordWebhookSettingsSchema.safeParse({
     discordWebhookUrl: formData.get("discordWebhookUrl"),
+    discordWebhookEvents: formData.getAll("discordWebhookEvents"),
   });
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
@@ -164,7 +165,10 @@ export async function updateCampaignDiscordWebhook(campaignId: string, formData:
 
   await prisma.campaign.update({
     where: { id: campaignId },
-    data: { discordWebhookUrl: parsed.data.discordWebhookUrl || null },
+    data: {
+      discordWebhookUrl: parsed.data.discordWebhookUrl || null,
+      discordWebhookEvents: parsed.data.discordWebhookEvents,
+    },
   });
 
   revalidatePath(`/campaigns/${campaignId}/settings`);

@@ -1,5 +1,3 @@
-import { format } from "date-fns";
-
 import {
   Card,
   CardContent,
@@ -8,6 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ProposeSessionDialog } from "@/components/sessions/propose-session-dialog";
+import { formatSessionDateTime } from "@/lib/sessionDateFormat";
 
 export function DraftProposalCard({
   campaignId,
@@ -22,8 +21,8 @@ export function DraftProposalCard({
         <CardTitle>Draft session ready</CardTitle>
         <CardDescription>
           Your recurring schedule suggests{" "}
-          {format(proposal.startsAt, "EEEE, MMMM d 'at' h:mm a")}. Review and
-          send it to the party.
+          {formatSessionDateTime(proposal.startsAt)}. Review and send it to
+          the party.
         </CardDescription>
       </CardHeader>
       <CardContent className="pb-6">

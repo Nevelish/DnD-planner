@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireMember } from "@/lib/permissions";
 import { rsvpSchema } from "@/lib/validations/session";
 import { notifyCampaignMembers } from "@/lib/notifications";
+import { formatSessionDateTime } from "@/lib/sessionDateFormat";
 
 export async function respond(
   campaignId: string,
@@ -20,14 +21,20 @@ export async function respond(
     throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
 
-  const existing = await prisma.rsvp.findUnique({
-    where: {
-      sessionProposalId_memberId: {
-        sessionProposalId: proposalId,
-        memberId: membership.id,
+  const [existing, proposal] = await Promise.all([
+    prisma.rsvp.findUnique({
+      where: {
+        sessionProposalId_memberId: {
+          sessionProposalId: proposalId,
+          memberId: membership.id,
+        },
       },
-    },
-  });
+    }),
+    prisma.sessionProposal.findUniqueOrThrow({
+      where: { id: proposalId },
+      select: { startsAt: true },
+    }),
+  ]);
 
   const isCancellation = existing?.status === "YES" && parsed.data.status === "NO";
   if (isCancellation && !parsed.data.reason) {
@@ -62,7 +69,7 @@ export async function respond(
     title: isCancellation
       ? "A player can no longer make the next session"
       : "RSVP updated",
-    body: parsed.data.reason,
+    body: `${formatSessionDateTime(proposal.startsAt)}${parsed.data.reason ? ` — ${parsed.data.reason}` : ""}`,
     link: `/campaigns/${campaignId}/sessions/${proposalId}`,
     excludeUserId: membership.userId,
   });
