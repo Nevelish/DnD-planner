@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Campaign" ADD COLUMN     "discordWebhookEvents" "NotificationType"[] NOT NULL DEFAULT ARRAY['SESSION_PROPOSED', 'SESSION_CANCELLED', 'RSVP_CHANGED', 'MEMBER_JOINED', 'MEMBER_LEFT', 'RECURRING_DRAFT_READY']::"NotificationType"[];

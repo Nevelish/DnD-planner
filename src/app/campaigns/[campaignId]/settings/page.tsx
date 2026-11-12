@@ -53,6 +53,7 @@ export default async function CampaignSettingsPage({
           <DiscordWebhookForm
             campaignId={campaignId}
             discordWebhookUrl={campaign.discordWebhookUrl}
+            discordWebhookEvents={campaign.discordWebhookEvents}
           />
         </CardContent>
       </Card>

@@ -29,11 +29,11 @@ model User {
   sessions Session[]
 
   memberships      CampaignMember[]
-  proposedSessions SessionProposal[]  @relation("ProposedBy")
+  proposedSessions SessionProposal[] @relation("ProposedBy")
   notifications    Notification[]
   campaignNotes    CampaignNote[]
   playerNotes      PlayerNote[]
-  ownedCampaigns   Campaign[]         @relation("CampaignOwner")
+  ownedCampaigns   Campaign[]        @relation("CampaignOwner")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -90,14 +90,15 @@ enum CampaignRole {
 }
 
 model Campaign {
-  id                String   @id @default(cuid())
-  name              String
-  description       String?  @db.Text
-  ownerId           String
-  inviteCode        String   @unique
-  discordWebhookUrl String? // posts campaign notifications (session proposed/cancelled, RSVP, etc.) to Discord
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                   String             @id @default(cuid())
+  name                 String
+  description          String?            @db.Text
+  ownerId              String
+  inviteCode           String             @unique
+  discordWebhookUrl    String? // posts campaign notifications (session proposed/cancelled, RSVP, etc.) to Discord
+  discordWebhookEvents NotificationType[] @default([SESSION_PROPOSED, SESSION_CANCELLED, RSVP_CHANGED, MEMBER_JOINED, MEMBER_LEFT, RECURRING_DRAFT_READY]) // which event types actually post to discordWebhookUrl
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 
   owner            User              @relation("CampaignOwner", fields: [ownerId], references: [id])
   members          CampaignMember[]
@@ -134,17 +135,17 @@ enum SessionProposalStatus {
 }
 
 model SessionProposal {
-  id              String                 @id @default(cuid())
+  id              String                @id @default(cuid())
   campaignId      String
   proposedById    String
   title           String?
   startsAt        DateTime
   durationMinutes Int?
-  status          SessionProposalStatus  @default(PROPOSED)
+  status          SessionProposalStatus @default(PROPOSED)
   recurringRuleId String?
-  cancelReason    String?                @db.Text
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
+  cancelReason    String?               @db.Text
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
 
   campaign      Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   proposedBy    User           @relation("ProposedBy", fields: [proposedById], references: [id])
