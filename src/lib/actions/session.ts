@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireDM } from "@/lib/permissions";
 import { proposalSchema } from "@/lib/validations/session";
 import { notifyCampaignMembers } from "@/lib/notifications";
+import { formatSessionDateTime } from "@/lib/sessionDateFormat";
 
 function parseProposalForm(formData: FormData) {
   const parsed = proposalSchema.safeParse({
@@ -53,7 +54,7 @@ export async function createProposal(campaignId: string, formData: FormData) {
   await notifyCampaignMembers(campaignId, {
     type: "SESSION_PROPOSED",
     title: "New session proposed",
-    body: proposal.title ?? undefined,
+    body: `${formatSessionDateTime(proposal.startsAt)}${proposal.title ? ` — ${proposal.title}` : ""}`,
     link: `/campaigns/${campaignId}/sessions/${proposal.id}`,
     excludeUserId: dm.userId,
   });
@@ -101,6 +102,7 @@ export async function publishDraft(
   await notifyCampaignMembers(campaignId, {
     type: "SESSION_PROPOSED",
     title: "New session proposed",
+    body: `${formatSessionDateTime(data.startsAt)}${data.title ? ` — ${data.title}` : ""}`,
     link: `/campaigns/${campaignId}/sessions/${proposalId}`,
     excludeUserId: dm.userId,
   });
@@ -146,7 +148,7 @@ export async function cancelProposal(
 ) {
   await requireDM(campaignId);
 
-  await prisma.sessionProposal.update({
+  const cancelled = await prisma.sessionProposal.update({
     where: { id: proposalId },
     data: { status: "CANCELLED", cancelReason: reason },
   });
@@ -154,7 +156,7 @@ export async function cancelProposal(
   await notifyCampaignMembers(campaignId, {
     type: "SESSION_CANCELLED",
     title: "Session cancelled",
-    body: reason,
+    body: `${formatSessionDateTime(cancelled.startsAt)}${reason ? ` — ${reason}` : ""}`,
     link: `/campaigns/${campaignId}/sessions/${proposalId}`,
   });
 
