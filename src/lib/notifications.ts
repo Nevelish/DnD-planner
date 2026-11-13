@@ -4,6 +4,24 @@ import { postToDiscordWebhook } from "@/lib/discordWebhook";
 import { getRequestOrigin } from "@/lib/requestOrigin";
 import type { NotificationType } from "@prisma/client";
 
+// Fallback embed color per event type, used whenever a call site doesn't
+// supply its own override (e.g. RSVP_CHANGED's Yes/No-specific color).
+const DEFAULT_DISCORD_EMBED_COLORS: Record<NotificationType, number> = {
+  CAMPAIGN_INVITE: 0xb87e40,
+  MEMBER_JOINED: 0x57a64a,
+  MEMBER_LEFT: 0xd9822b,
+  SESSION_PROPOSED: 0x3a7ca5,
+  SESSION_CANCELLED: 0xd9534f,
+  RSVP_CHANGED: 0xb87e40,
+  RECURRING_DRAFT_READY: 0x8e6fbd,
+};
+
+// Event types worth @mentioning opted-in players for — the two "this
+// affects your plans, go look" events. Deliberately excludes RSVP_CHANGED:
+// pinging on every RSVP would be exactly the noise the event-filter exists
+// to avoid.
+const MENTION_EVENT_TYPES: NotificationType[] = ["SESSION_PROPOSED", "SESSION_CANCELLED"];
+
 /** Mirrors whatever just got written to the in-app Notification to the
  * campaign's Discord webhook, if one is configured AND this event type is
  * one the DM has it set to post (per-campaign, in Settings). Looked up
@@ -14,22 +32,37 @@ import type { NotificationType } from "@prisma/client";
  * action that triggered it. */
 async function notifyDiscord(
   campaignId: string | null | undefined,
-  input: { type: NotificationType; title: string; body?: string; link?: string },
+  input: { type: NotificationType; title: string; body?: string; link?: string; color?: number },
 ) {
   if (!campaignId) return;
 
   const campaign = await prisma.campaign.findUnique({
     where: { id: campaignId },
-    select: { discordWebhookUrl: true, discordWebhookEvents: true },
+    select: { name: true, discordWebhookUrl: true, discordWebhookEvents: true },
   });
   if (!campaign?.discordWebhookUrl) return;
   if (!campaign.discordWebhookEvents.includes(input.type)) return;
+
+  let content: string | undefined;
+  if (MENTION_EVENT_TYPES.includes(input.type)) {
+    const players = await prisma.character.findMany({
+      where: { campaignId, discordUserId: { not: null } },
+      select: { discordUserId: true },
+    });
+    if (players.length > 0) {
+      content = players.map((p) => `<@${p.discordUserId}>`).join(" ");
+    }
+  }
 
   const origin = await getRequestOrigin();
   void postToDiscordWebhook(campaign.discordWebhookUrl, {
     title: input.title,
     body: input.body,
     url: input.link ? `${origin}${input.link}` : undefined,
+    color: input.color ?? DEFAULT_DISCORD_EMBED_COLORS[input.type],
+    footerText: campaign.name,
+    timestamp: new Date().toISOString(),
+    content,
   });
 }
 
@@ -40,6 +73,7 @@ export async function createNotification(input: {
   title: string;
   body?: string;
   link?: string;
+  color?: number;
 }) {
   const notification = await prisma.notification.create({ data: input });
   await notifyDiscord(input.campaignId, input);
@@ -58,6 +92,7 @@ export async function notifyCampaignMembers(
     body?: string;
     link?: string;
     excludeUserId?: string;
+    color?: number;
   },
 ) {
   const members = await prisma.campaignMember.findMany({

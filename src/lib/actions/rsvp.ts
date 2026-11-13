@@ -21,7 +21,7 @@ export async function respond(
     throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
 
-  const [existing, proposal] = await Promise.all([
+  const [existing, proposal, user] = await Promise.all([
     prisma.rsvp.findUnique({
       where: {
         sessionProposalId_memberId: {
@@ -33,6 +33,10 @@ export async function respond(
     prisma.sessionProposal.findUniqueOrThrow({
       where: { id: proposalId },
       select: { startsAt: true },
+    }),
+    prisma.user.findUniqueOrThrow({
+      where: { id: membership.userId },
+      select: { name: true, email: true },
     }),
   ]);
 
@@ -64,14 +68,16 @@ export async function respond(
     },
   });
 
+  const playerName = user.name ?? user.email;
   await notifyCampaignMembers(campaignId, {
     type: "RSVP_CHANGED",
     title: isCancellation
-      ? "A player can no longer make the next session"
-      : "RSVP updated",
+      ? `${playerName} can no longer make it`
+      : `${playerName} RSVP'd ${parsed.data.status === "YES" ? "Yes" : "No"}`,
     body: `${formatSessionDateTime(proposal.startsAt)}${parsed.data.reason ? ` — ${parsed.data.reason}` : ""}`,
     link: `/campaigns/${campaignId}/sessions/${proposalId}`,
     excludeUserId: membership.userId,
+    color: isCancellation || parsed.data.status === "NO" ? 0xd9534f : 0x57a64a,
   });
 
   revalidatePath(`/campaigns/${campaignId}/sessions/${proposalId}`);

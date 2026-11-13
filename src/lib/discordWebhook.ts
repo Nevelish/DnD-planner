@@ -1,11 +1,20 @@
 import "server-only";
 
-const EMBED_COLOR = 0xb87e40; // matches the app's gold accent
+const DEFAULT_EMBED_COLOR = 0xb87e40; // matches the app's gold accent
 
 export type DiscordWebhookEvent = {
   title: string;
   body?: string | null;
   url?: string | null;
+  /** Overrides the default gold embed color. */
+  color?: number;
+  /** Shown in the embed footer, e.g. the campaign name. */
+  footerText?: string | null;
+  /** ISO 8601 timestamp rendered by Discord's own local-time formatting. */
+  timestamp?: string | null;
+  /** Top-level message content, e.g. "<@123> <@456>" — mentions only ping
+   * when placed here, never inside an embed's title/description/fields. */
+  content?: string | null;
 };
 
 /** Posts a simple embed to a Discord webhook. Best-effort — never throws, so
@@ -28,12 +37,15 @@ export async function postToDiscordWebhook(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         username: "DnD Planner",
+        content: event.content || undefined,
         embeds: [
           {
             title: event.title,
             description: event.body || undefined,
             url: event.url || undefined,
-            color: EMBED_COLOR,
+            color: event.color ?? DEFAULT_EMBED_COLOR,
+            footer: event.footerText ? { text: event.footerText } : undefined,
+            timestamp: event.timestamp || undefined,
           },
         ],
       }),

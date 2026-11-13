@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/permissions";
 import { Card, CardContent } from "@/components/ui/card";
 import { MarkAllReadButton } from "@/components/notifications/mark-all-read-button";
+import { ClearAllNotificationsButton } from "@/components/notifications/clear-all-notifications-button";
 
 export default async function NotificationsPage() {
   const userId = await requireUserId();
@@ -18,7 +19,12 @@ export default async function NotificationsPage() {
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-6">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="font-display text-2xl font-semibold tracking-tight">Notifications</h1>
-        <MarkAllReadButton />
+        {notifications.length > 0 && (
+          <div className="flex items-center gap-2">
+            <MarkAllReadButton />
+            <ClearAllNotificationsButton />
+          </div>
+        )}
       </div>
 
       {notifications.length === 0 ? (

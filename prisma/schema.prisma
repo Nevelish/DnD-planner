@@ -222,6 +222,7 @@ model Character {
   dndBeyondSyncStatus   DndBeyondSyncStatus @default(NOT_LINKED)
   dndBeyondLastSyncedAt DateTime?
   dndBeyondSnapshot     Json?
+  discordUserId         String? // opts this player into @mentions on session proposed/cancelled Discord posts
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
 

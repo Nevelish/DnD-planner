@@ -38,3 +38,9 @@ export async function markAllRead() {
   });
   revalidatePath("/notifications");
 }
+
+export async function clearAllNotifications() {
+  const userId = await requireUserId();
+  await prisma.notification.deleteMany({ where: { recipientId: userId } });
+  revalidatePath("/notifications");
+}
