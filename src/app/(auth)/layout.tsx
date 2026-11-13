@@ -1,6 +1,5 @@
 import Link from "next/link";
-
-import { D20Icon } from "@/components/icons/d20-icon";
+import Image from "next/image";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,7 +8,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         href="/"
         className="mb-8 flex items-center gap-2 font-display text-xl font-semibold tracking-tight"
       >
-        <D20Icon className="size-6 text-primary" />
+        <Image src="/icons/icon-128x128.png" alt="" width={24} height={24} className="rounded-sm" />
         DnD Planner
       </Link>
       <div className="w-full max-w-sm">{children}</div>

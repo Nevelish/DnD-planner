@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 import { auth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,6 @@ import { NotificationBell } from "@/components/layout/notification-bell";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { SkinToggle } from "@/components/layout/skin-toggle";
 import { NavLinks } from "@/components/layout/nav-links";
-import { D20Icon } from "@/components/icons/d20-icon";
 
 export async function NavBar() {
   const session = await auth();
@@ -20,7 +20,7 @@ export async function NavBar() {
           href={user ? "/dashboard" : "/"}
           className="flex items-center gap-2 font-display font-semibold tracking-tight"
         >
-          <D20Icon className="size-5 text-primary" />
+          <Image src="/icons/icon-128x128.png" alt="" width={20} height={20} className="rounded-sm" />
           DnD Planner
         </Link>
 
