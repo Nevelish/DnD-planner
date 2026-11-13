@@ -104,11 +104,16 @@ export async function joinCampaignByCode(inviteCode: string) {
     data: { campaignId: campaign.id, userId, role: "PLAYER" },
   });
 
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { name: true, email: true },
+  });
+
   await createNotification({
     recipientId: campaign.ownerId,
     campaignId: campaign.id,
     type: "MEMBER_JOINED",
-    title: `A new player joined ${campaign.name}`,
+    title: `${user.name ?? user.email} joined ${campaign.name}`,
     link: `/campaigns/${campaign.id}/members`,
   });
 
@@ -131,11 +136,16 @@ export async function leaveCampaign(campaignId: string) {
 
   await prisma.campaignMember.delete({ where: { id: membership.id } });
 
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { name: true, email: true },
+  });
+
   await createNotification({
     recipientId: campaign.ownerId,
     campaignId: campaign.id,
     type: "MEMBER_LEFT",
-    title: `A player left ${campaign.name}`,
+    title: `${user.name ?? user.email} left ${campaign.name}`,
     link: `/campaigns/${campaign.id}/members`,
   });
 

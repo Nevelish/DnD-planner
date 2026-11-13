@@ -33,6 +33,7 @@ export function CharacterForm({
     level: number;
     race: string | null;
     notes: string | null;
+    discordUserId: string | null;
   };
   trigger?: React.ReactNode;
 }) {
@@ -110,6 +111,21 @@ export function CharacterForm({
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="notes">Notes (optional)</Label>
             <Textarea id="notes" name="notes" defaultValue={defaultValues?.notes ?? ""} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="discordUserId">Discord user ID (optional)</Label>
+            <Input
+              id="discordUserId"
+              name="discordUserId"
+              inputMode="numeric"
+              placeholder="e.g. 1234567890123456"
+              defaultValue={defaultValues?.discordUserId ?? ""}
+            />
+            <p className="text-sm text-muted-foreground">
+              If set, you&apos;ll be @mentioned in Discord when a session is proposed or
+              cancelled. Find yours in Discord under Settings → Advanced → Enable Developer
+              Mode, then right-click your name and Copy User ID.
+            </p>
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isPending}>

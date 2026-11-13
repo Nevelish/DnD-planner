@@ -15,6 +15,7 @@ function parseCharacterForm(formData: FormData) {
     level: formData.get("level"),
     race: formData.get("race"),
     notes: formData.get("notes"),
+    discordUserId: formData.get("discordUserId"),
   });
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
