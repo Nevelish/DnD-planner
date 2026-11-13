@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">DnD Planner icon</title>
+  <desc id="desc">A deep navy rounded-square app icon with gold d20 wireframe and a calendar with a check mark in the center.</desc>
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#07162f"/>
+      <stop offset="50%" stop-color="#0b2247"/>
+      <stop offset="100%" stop-color="#07162f"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffde84"/>
+      <stop offset="55%" stop-color="#f6c55f"/>
+      <stop offset="100%" stop-color="#d89d30"/>
+    </linearGradient>
+    <linearGradient id="facetGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6a92c9" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#4e7bb8" stop-opacity="0.10"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.8" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+    <style>
+      .goldstroke { stroke: url(#goldGrad); stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .facet { fill: url(#facetGrad); }
+    </style>
+  </defs>
+
+  <rect x="11" y="11" width="234" height="234" rx="36" fill="url(#bgGrad)"/>
+  <rect x="14" y="14" width="228" height="228" rx="34" fill="none" stroke="url(#goldGrad)" stroke-width="3.5"/>
+
+  <!-- D20 geometry -->
+  <g filter="url(#softShadow)">
+    <polygon points="128,44 75,72 48,110 48,159 82,193 128,211 174,193 208,159 208,110 181,72" class="goldstroke" stroke-width="4.2"/>
+    <line x1="128" y1="44" x2="128" y2="211" class="goldstroke" stroke-width="2.7" opacity="0.96"/>
+    <line x1="75" y1="72" x2="128" y2="44" class="goldstroke" stroke-width="2.7"/>
+    <line x1="181" y1="72" x2="128" y2="44" class="goldstroke" stroke-width="2.7"/>
+    <line x1="48" y1="110" x2="82" y2="193" class="goldstroke" stroke-width="2.7"/>
+    <line x1="208" y1="110" x2="174" y2="193" class="goldstroke" stroke-width="2.7"/>
+    <line x1="128" y1="211" x2="82" y2="193" class="goldstroke" stroke-width="2.7"/>
+    <line x1="128" y1="211" x2="174" y2="193" class="goldstroke" stroke-width="2.7"/>
+    <line x1="75" y1="72" x2="48" y2="110" class="goldstroke" stroke-width="2.7"/>
+    <line x1="181" y1="72" x2="208" y2="110" class="goldstroke" stroke-width="2.7"/>
+    <line x1="75" y1="72" x2="82" y2="193" class="goldstroke" stroke-width="2.2" opacity="0.88"/>
+    <line x1="181" y1="72" x2="174" y2="193" class="goldstroke" stroke-width="2.2" opacity="0.88"/>
+    <line x1="48" y1="110" x2="174" y2="193" class="goldstroke" stroke-width="2.2" opacity="0.88"/>
+    <line x1="208" y1="110" x2="82" y2="193" class="goldstroke" stroke-width="2.2" opacity="0.88"/>
+
+    <!-- subtle facets -->
+    <polygon points="128,44 181,72 158,118 128,110" class="facet"/>
+    <polygon points="75,72 128,44 128,110 98,118" class="facet"/>
+    <polygon points="48,110 98,118 82,193" class="facet"/>
+    <polygon points="208,110 158,118 174,193" class="facet"/>
+    <polygon points="82,193 128,211 128,160" class="facet"/>
+    <polygon points="174,193 128,211 128,160" class="facet"/>
+  </g>
+
+  <!-- Center calendar -->
+  <g filter="url(#softShadow)">
+    <rect x="89" y="92" width="78" height="70" rx="14" fill="#07162f" stroke="url(#goldGrad)" stroke-width="4.1"/>
+    <line x1="89" y1="114" x2="167" y2="114" class="goldstroke" stroke-width="3.2"/>
+    <rect x="103" y="83" width="8.5" height="22" rx="4.2" fill="url(#goldGrad)"/>
+    <rect x="144.5" y="83" width="8.5" height="22" rx="4.2" fill="url(#goldGrad)"/>
+    <path d="M111 132 L124 145 L146 123" class="goldstroke" stroke-width="7.2"/>
+  </g>
+</svg>

@@ -11,7 +11,7 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-24 text-center">
-      <Image src="/icons/icon-256x256.png" alt="" width={64} height={64} className="rounded-xl" />
+      <Image src="/icons/icon.svg" alt="" width={64} height={64} />
       <h1 className="max-w-xl font-display text-4xl font-semibold tracking-tight">
         Run your campaigns. Keep your party in sync.
       </h1>
