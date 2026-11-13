@@ -18,7 +18,7 @@ export default function GlobalError({
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-24 text-center">
-      <Image src="/icons/icon-256x256.png" alt="" width={48} height={48} className="rounded-lg" />
+      <Image src="/icons/icon.svg" alt="" width={48} height={48} />
       <h1 className="font-display text-2xl font-semibold tracking-tight">Something went wrong</h1>
       <p className="max-w-sm text-muted-foreground">{error.message}</p>
       <Button onClick={reset}>Try again</Button>
