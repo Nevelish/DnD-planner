@@ -2,6 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
@@ -70,6 +71,27 @@ export async function setUserDisabled(userId: string, disabled: boolean) {
   }
 
   await prisma.user.update({ where: { id: userId }, data: { disabled } });
+  revalidatePath("/admin/users");
+}
+
+export async function deleteUser(userId: string) {
+  const adminId = await requireAdmin();
+
+  if (userId === adminId) {
+    throw new Error("You can't delete your own account.");
+  }
+
+  try {
+    await prisma.user.delete({ where: { id: userId } });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2003") {
+      throw new Error(
+        "This account still owns a campaign, proposed a session, or authored a note — delete or reassign those first.",
+      );
+    }
+    throw e;
+  }
+
   revalidatePath("/admin/users");
 }
 
