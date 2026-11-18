@@ -8,7 +8,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         href="/"
         className="mb-8 flex items-center gap-2 font-display text-xl font-semibold tracking-tight"
       >
-        <Image src="/icons/icon.svg" alt="" width={24} height={24} />
+        <Image src="/icons/icon.svg" alt="" width={32} height={32} />
         DnD Planner
       </Link>
       <div className="w-full max-w-sm">{children}</div>
