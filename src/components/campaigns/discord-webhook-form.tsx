@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Image from "next/image";
 import { toast } from "sonner";
-import { SendIcon } from "lucide-react";
+import { DownloadIcon, SendIcon } from "lucide-react";
 
 import {
   updateCampaignDiscordWebhook,
@@ -82,6 +83,28 @@ export function DiscordWebhookForm({
           Integrations → Webhooks → New Webhook → Copy Webhook URL. Leave
           blank to turn this off.
         </p>
+      </div>
+
+      <div className="flex items-center gap-3 rounded-md border p-3">
+        <Image
+          src="/icons/icon-512x512.png"
+          alt=""
+          width={40}
+          height={40}
+          className="rounded-md"
+        />
+        <div className="flex-1 text-sm">
+          <p className="font-medium">Webhook avatar icon</p>
+          <p className="text-xs text-muted-foreground">
+            Download it, then upload it as this webhook&apos;s avatar on
+            Discord&apos;s Integrations → Webhooks settings.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" asChild>
+          <a href="/icons/icon-512x512.png" download="dnd-planner-icon.png">
+            <DownloadIcon /> Download
+          </a>
+        </Button>
       </div>
 
       <div className="flex flex-col gap-1.5">
