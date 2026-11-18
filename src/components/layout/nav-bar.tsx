@@ -20,7 +20,7 @@ export async function NavBar() {
           href={user ? "/dashboard" : "/"}
           className="flex items-center gap-2 font-display font-semibold tracking-tight"
         >
-          <Image src="/icons/icon.svg" alt="" width={20} height={20} />
+          <Image src="/icons/icon.svg" alt="" width={28} height={28} />
           DnD Planner
         </Link>
 

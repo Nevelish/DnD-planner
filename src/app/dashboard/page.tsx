@@ -1,9 +1,13 @@
 import Link from "next/link";
-import { format } from "date-fns";
 
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/permissions";
 import { ensureUpcomingProposals } from "@/lib/recurring";
+import {
+  formatCompactDateTimeForUser,
+  getDateTimePrefs,
+  type DateTimePrefs,
+} from "@/lib/sessionDateFormat";
 import {
   Card,
   CardContent,
@@ -24,6 +28,8 @@ export default async function DashboardPage() {
   await Promise.all(
     dmMemberships.map((m) => ensureUpcomingProposals(m.campaignId)),
   );
+
+  const prefs = await getDateTimePrefs(userId);
 
   const memberships = await prisma.campaignMember.findMany({
     where: { userId },
@@ -75,7 +81,7 @@ export default async function DashboardPage() {
               </h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 {dmCampaigns.map((m) => (
-                  <DashboardCampaignCard key={m.campaign.id} membership={m} />
+                  <DashboardCampaignCard key={m.campaign.id} membership={m} prefs={prefs} />
                 ))}
               </div>
             </section>
@@ -88,7 +94,7 @@ export default async function DashboardPage() {
               </h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 {playerCampaigns.map((m) => (
-                  <DashboardCampaignCard key={m.campaign.id} membership={m} />
+                  <DashboardCampaignCard key={m.campaign.id} membership={m} prefs={prefs} />
                 ))}
               </div>
             </section>
@@ -101,6 +107,7 @@ export default async function DashboardPage() {
 
 function DashboardCampaignCard({
   membership,
+  prefs,
 }: {
   membership: {
     role: "DM" | "PLAYER";
@@ -110,6 +117,7 @@ function DashboardCampaignCard({
       sessionProposals: { id: string; title: string | null; startsAt: Date }[];
     };
   };
+  prefs: DateTimePrefs;
 }) {
   const nextSession = membership.campaign.sessionProposals[0];
   return (
@@ -124,7 +132,7 @@ function DashboardCampaignCard({
           </div>
           <CardDescription>
             {nextSession
-              ? `Next: ${format(nextSession.startsAt, "MMM d 'at' h:mm a")}`
+              ? `Next: ${formatCompactDateTimeForUser(nextSession.startsAt, prefs)}`
               : "No upcoming session proposed"}
           </CardDescription>
         </CardHeader>

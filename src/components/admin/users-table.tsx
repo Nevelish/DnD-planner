@@ -7,6 +7,7 @@ import {
   MoreVerticalIcon,
   ShieldIcon,
   ShieldOffIcon,
+  Trash2Icon,
   UserCheckIcon,
   UserXIcon,
 } from "lucide-react";
@@ -22,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ResetPasswordDialog } from "@/components/admin/reset-password-dialog";
+import { DeleteUserDialog } from "@/components/admin/delete-user-dialog";
 
 type UserRow = {
   id: string;
@@ -42,6 +44,7 @@ export function UsersTable({
 }) {
   const [isPending, startTransition] = useTransition();
   const [resetTarget, setResetTarget] = useState<UserRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
 
   function run(action: () => Promise<void>, successMessage: string) {
     startTransition(async () => {
@@ -146,6 +149,14 @@ export function UsersTable({
                         <UserXIcon /> Disable account
                       </DropdownMenuItem>
                     )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      disabled={isSelf}
+                      onSelect={() => setDeleteTarget(user)}
+                    >
+                      <Trash2Icon /> Delete account
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -157,6 +168,10 @@ export function UsersTable({
       <ResetPasswordDialog
         user={resetTarget}
         onOpenChange={(open) => !open && setResetTarget(null)}
+      />
+      <DeleteUserDialog
+        user={deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
       />
     </>
   );

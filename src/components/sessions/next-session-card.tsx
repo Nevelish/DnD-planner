@@ -1,5 +1,4 @@
-import { format } from "date-fns";
-
+import { formatSessionDateTimeForUser, type DateTimePrefs } from "@/lib/sessionDateFormat";
 import {
   Card,
   CardAction,
@@ -35,11 +34,13 @@ export function NextSessionCard({
   proposal,
   currentMemberId,
   isDM,
+  prefs,
 }: {
   campaignId: string;
   proposal: Proposal;
   currentMemberId: string;
   isDM: boolean;
+  prefs: DateTimePrefs;
 }) {
   if (!proposal) {
     return (
@@ -66,7 +67,7 @@ export function NextSessionCard({
           <div>
             <CardTitle>{proposal.title || "Next session"}</CardTitle>
             <CardDescription>
-              {format(proposal.startsAt, "EEEE, MMMM d 'at' h:mm a")}
+              {formatSessionDateTimeForUser(proposal.startsAt, prefs)}
               {proposal.durationMinutes ? ` · ${proposal.durationMinutes} min` : ""}
             </CardDescription>
           </div>

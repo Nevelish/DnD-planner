@@ -14,16 +14,31 @@ enum UserRole {
   USER
 }
 
+enum TimeFormat {
+  HOUR_12
+  HOUR_24
+}
+
+/// Day-before-month (DMY, Norwegian/European) vs month-before-day (MDY, US)
+/// ordering for displaying dates. Governs the calendar's week-start day too
+/// (Monday for DMY, Sunday for MDY).
+enum DateFormat {
+  DMY
+  MDY
+}
+
 model User {
-  id            String    @id @default(cuid())
+  id            String     @id @default(cuid())
   name          String?
-  email         String?   @unique
+  email         String?    @unique
   emailVerified DateTime?
   image         String?
   passwordHash  String? // null for Discord-only accounts
-  calendarToken String?   @unique // secret token for the .ics subscription feed
-  role          UserRole  @default(USER)
-  disabled      Boolean   @default(false) // blocks sign-in without deleting their campaigns/notes/RSVPs
+  calendarToken String?    @unique // secret token for the .ics subscription feed
+  role          UserRole   @default(USER)
+  disabled      Boolean    @default(false) // blocks sign-in without deleting their campaigns/notes/RSVPs
+  timeFormat    TimeFormat @default(HOUR_24)
+  dateFormat    DateFormat @default(DMY)
 
   accounts Account[]
   sessions Session[]

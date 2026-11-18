@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ChangePasswordForm } from "@/components/auth/change-password-form";
+import { DateTimeFormatForm } from "@/components/account/date-time-format-form";
 
 export default async function AccountPage() {
   const userId = await requireUserId();
@@ -25,6 +26,18 @@ export default async function AccountPage() {
           <CardContent className="flex flex-col gap-1 pb-6 text-sm">
             <p>{user.name}</p>
             <p className="text-muted-foreground">{user.email}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Date & time format</CardTitle>
+            <CardDescription>
+              How dates and times are shown to you across the app.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pb-6">
+            <DateTimeFormatForm timeFormat={user.timeFormat} dateFormat={user.dateFormat} />
           </CardContent>
         </Card>
 
