@@ -3,6 +3,7 @@ import { requireUserId } from "@/lib/permissions";
 import { ensureUpcomingProposals } from "@/lib/recurring";
 import { ensureCalendarToken } from "@/lib/calendarToken";
 import { getRequestOrigin } from "@/lib/requestOrigin";
+import { getDateTimePrefs, weekStartsOnForUser } from "@/lib/sessionDateFormat";
 import { CampaignCalendar } from "@/components/calendar/campaign-calendar";
 import { SubscribeCalendarBox } from "@/components/calendar/subscribe-calendar-box";
 import {
@@ -21,7 +22,7 @@ export default async function CalendarPage() {
     select: { campaignId: true, role: true },
   });
 
-  const [, calendarToken, origin] = await Promise.all([
+  const [, calendarToken, origin, prefs] = await Promise.all([
     Promise.all(
       memberships
         .filter((m) => m.role === "DM")
@@ -29,6 +30,7 @@ export default async function CalendarPage() {
     ),
     ensureCalendarToken(userId),
     getRequestOrigin(),
+    getDateTimePrefs(userId),
   ]);
 
   const campaignIds = memberships.map((m) => m.campaignId);
@@ -57,7 +59,7 @@ export default async function CalendarPage() {
       <h1 className="mb-6 font-display text-2xl font-semibold tracking-tight">Calendar</h1>
 
       <div className="mb-6 flex flex-col gap-6">
-        <CampaignCalendar sessions={sessions} />
+        <CampaignCalendar sessions={sessions} weekStartsOn={weekStartsOnForUser(prefs)} />
 
         <Card>
           <CardHeader>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Calendar, dateFnsLocalizer, type Event } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
@@ -7,14 +8,6 @@ import { enUS } from "date-fns/locale";
 
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "@/components/calendar/campaign-calendar.css";
-
-const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek: () => startOfWeek(new Date(), { locale: enUS }),
-  getDay,
-  locales: { "en-US": enUS },
-});
 
 export type CalendarSession = {
   id: string;
@@ -26,8 +19,26 @@ export type CalendarSession = {
   status: "PROPOSED" | "CONFIRMED";
 };
 
-export function CampaignCalendar({ sessions }: { sessions: CalendarSession[] }) {
+export function CampaignCalendar({
+  sessions,
+  weekStartsOn,
+}: {
+  sessions: CalendarSession[];
+  weekStartsOn: 0 | 1;
+}) {
   const router = useRouter();
+
+  const localizer = useMemo(
+    () =>
+      dateFnsLocalizer({
+        format,
+        parse,
+        startOfWeek: () => startOfWeek(new Date(), { locale: enUS, weekStartsOn }),
+        getDay,
+        locales: { "en-US": enUS },
+      }),
+    [weekStartsOn],
+  );
 
   const events: (Event & { resource: CalendarSession })[] = sessions.map((s) => {
     const start = new Date(s.startsAt);

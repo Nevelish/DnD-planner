@@ -1,8 +1,12 @@
 import Link from "next/link";
-import { format } from "date-fns";
 
 import { prisma } from "@/lib/prisma";
 import { requireMembershipForPage } from "@/lib/permissions";
+import {
+  formatDateOnlyForUser,
+  formatSessionDateTimeForUser,
+  getDateTimePrefs,
+} from "@/lib/sessionDateFormat";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProposeSessionDialog } from "@/components/sessions/propose-session-dialog";
@@ -21,13 +25,16 @@ export default async function SessionsPage({
   params: Promise<{ campaignId: string }>;
 }) {
   const { campaignId } = await params;
-  const { membership } = await requireMembershipForPage(campaignId);
+  const { userId, membership } = await requireMembershipForPage(campaignId);
   const isDM = membership.role === "DM";
 
-  const proposals = await prisma.sessionProposal.findMany({
-    where: { campaignId, status: isDM ? undefined : { not: "DRAFT" } },
-    orderBy: { startsAt: "desc" },
-  });
+  const [proposals, prefs] = await Promise.all([
+    prisma.sessionProposal.findMany({
+      where: { campaignId, status: isDM ? undefined : { not: "DRAFT" } },
+      orderBy: { startsAt: "desc" },
+    }),
+    getDateTimePrefs(userId),
+  ]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -46,10 +53,10 @@ export default async function SessionsPage({
                 <CardHeader className="flex-row items-center justify-between gap-2 px-4 pt-0">
                   <div>
                     <CardTitle className="text-base">
-                      {p.title || format(p.startsAt, "MMMM d, yyyy")}
+                      {p.title || formatDateOnlyForUser(p.startsAt, prefs)}
                     </CardTitle>
                     <CardDescription>
-                      {format(p.startsAt, "EEEE, MMMM d 'at' h:mm a")}
+                      {formatSessionDateTimeForUser(p.startsAt, prefs)}
                     </CardDescription>
                   </div>
                   <Badge variant={statusVariant[p.status]}>{p.status}</Badge>

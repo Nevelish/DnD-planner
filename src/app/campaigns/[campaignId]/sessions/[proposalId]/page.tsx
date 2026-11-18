@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
-import { format } from "date-fns";
 
 import { prisma } from "@/lib/prisma";
 import { requireMembershipForPage } from "@/lib/permissions";
+import { formatSessionDateTimeForUser, getDateTimePrefs } from "@/lib/sessionDateFormat";
 import {
   Card,
   CardAction,
@@ -32,15 +32,18 @@ export default async function SessionDetailPage({
   params: Promise<{ campaignId: string; proposalId: string }>;
 }) {
   const { campaignId, proposalId } = await params;
-  const { membership } = await requireMembershipForPage(campaignId);
+  const { userId, membership } = await requireMembershipForPage(campaignId);
   const isDM = membership.role === "DM";
 
-  const proposal = await prisma.sessionProposal.findUnique({
-    where: { id: proposalId, campaignId },
-    include: {
-      rsvps: { include: { member: { include: { user: true } } } },
-    },
-  });
+  const [proposal, prefs] = await Promise.all([
+    prisma.sessionProposal.findUnique({
+      where: { id: proposalId, campaignId },
+      include: {
+        rsvps: { include: { member: { include: { user: true } } } },
+      },
+    }),
+    getDateTimePrefs(userId),
+  ]);
   if (!proposal) notFound();
 
   const myRsvp = proposal.rsvps.find((r) => r.member.id === membership.id);
@@ -54,7 +57,7 @@ export default async function SessionDetailPage({
             <div>
               <CardTitle>{proposal.title || "Session"}</CardTitle>
               <CardDescription>
-                {format(proposal.startsAt, "EEEE, MMMM d 'at' h:mm a")}
+                {formatSessionDateTimeForUser(proposal.startsAt, prefs)}
                 {proposal.durationMinutes ? ` · ${proposal.durationMinutes} min` : ""}
               </CardDescription>
             </div>

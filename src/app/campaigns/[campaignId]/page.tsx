@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireMembershipForPage } from "@/lib/permissions";
 import { ensureUpcomingProposals } from "@/lib/recurring";
+import { getDateTimePrefs } from "@/lib/sessionDateFormat";
 import {
   Card,
   CardContent,
@@ -20,14 +21,14 @@ export default async function CampaignOverviewPage({
   params: Promise<{ campaignId: string }>;
 }) {
   const { campaignId } = await params;
-  const { membership } = await requireMembershipForPage(campaignId);
+  const { userId, membership } = await requireMembershipForPage(campaignId);
   const isDM = membership.role === "DM";
 
   if (isDM) {
     await ensureUpcomingProposals(campaignId);
   }
 
-  const [campaign, memberCount, nextProposal, draftProposal] = await Promise.all([
+  const [campaign, memberCount, nextProposal, draftProposal, prefs] = await Promise.all([
     prisma.campaign.findUniqueOrThrow({ where: { id: campaignId } }),
     prisma.campaignMember.count({ where: { campaignId } }),
     prisma.sessionProposal.findFirst({
@@ -45,6 +46,7 @@ export default async function CampaignOverviewPage({
           orderBy: { startsAt: "asc" },
         })
       : Promise.resolve(null),
+    getDateTimePrefs(userId),
   ]);
 
   return (
@@ -86,6 +88,7 @@ export default async function CampaignOverviewPage({
         proposal={nextProposal}
         isDM={isDM}
         currentMemberId={membership.id}
+        prefs={prefs}
       />
     </div>
   );
