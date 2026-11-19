@@ -45,12 +45,12 @@ async function notifyDiscord(
 
   let content: string | undefined;
   if (MENTION_EVENT_TYPES.includes(input.type)) {
-    const players = await prisma.character.findMany({
-      where: { campaignId, discordUserId: { not: null } },
-      select: { discordUserId: true },
+    const members = await prisma.campaignMember.findMany({
+      where: { campaignId, user: { discordUserId: { not: null } } },
+      select: { user: { select: { discordUserId: true } } },
     });
-    if (players.length > 0) {
-      content = players.map((p) => `<@${p.discordUserId}>`).join(" ");
+    if (members.length > 0) {
+      content = members.map((m) => `<@${m.user.discordUserId}>`).join(" ");
     }
   }
 

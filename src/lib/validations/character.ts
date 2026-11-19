@@ -18,13 +18,6 @@ export const characterSchema = z.object({
     .optional()
     .or(z.literal(""))
     .transform((v) => (v ? v : undefined)),
-  discordUserId: z
-    .string()
-    .trim()
-    .regex(/^\d{17,20}$/, "That doesn't look like a Discord user ID.")
-    .optional()
-    .or(z.literal(""))
-    .transform((v) => (v ? v : undefined)),
 });
 
 export type CharacterInput = z.infer<typeof characterSchema>;
