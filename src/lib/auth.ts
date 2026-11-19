@@ -56,14 +56,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     ...authConfig.callbacks,
-    async signIn({ user, account }) {
+    async signIn({ user }) {
       if (!user.id) return true;
 
       // Credentials sign-ins are already rejected for disabled accounts in
       // authorize() above; this also covers Discord, which has no such gate.
+      // Note: for a brand-new OAuth signup, the adapter hasn't created the
+      // User row yet at this point, so dbUser is null here — that's fine,
+      // a user that doesn't exist yet can't be disabled or need promoting.
       const dbUser = await prisma.user.findUnique({
         where: { id: user.id },
-        select: { role: true, disabled: true, discordUserId: true },
+        select: { role: true, disabled: true },
       });
       if (dbUser?.disabled) return false;
 
@@ -75,17 +78,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (adminCount === 0) {
           await prisma.user.update({ where: { id: user.id }, data: { role: "ADMIN" } });
         }
-      }
-
-      // First Discord sign-in: capture the Discord user ID automatically so
-      // @mentions on session proposed/cancelled Discord posts work without
-      // the user having to copy it in from Account settings. Never
-      // overwrites a value already set (e.g. entered manually).
-      if (account?.provider === "discord" && account.providerAccountId && !dbUser?.discordUserId) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { discordUserId: account.providerAccountId },
-        });
       }
 
       return true;
@@ -107,6 +99,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.role = (token.role as UserRole | undefined) ?? "USER";
       }
       return session;
+    },
+  },
+  events: {
+    // Fires once the adapter has created/linked the account, so the User
+    // row is guaranteed to exist — unlike signIn(), which for a brand-new
+    // OAuth signup runs before that row is created. Captures the Discord
+    // user ID automatically so @mentions on session proposed/cancelled
+    // Discord posts work without the user copying it in from Account
+    // settings. The discordUserId: null filter keeps this from overwriting
+    // a value already set (e.g. entered manually).
+    async linkAccount({ user, account }) {
+      if (account.provider !== "discord" || !user.id) return;
+      await prisma.user.updateMany({
+        where: { id: user.id, discordUserId: null },
+        data: { discordUserId: account.providerAccountId },
+      });
     },
   },
 });
