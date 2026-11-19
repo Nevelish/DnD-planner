@@ -39,6 +39,8 @@ model User {
   disabled      Boolean    @default(false) // blocks sign-in without deleting their campaigns/notes/RSVPs
   timeFormat    TimeFormat @default(HOUR_24)
   dateFormat    DateFormat @default(DMY)
+  discordUserId String? // opts this account into @mentions on session proposed/cancelled Discord posts;
+  // auto-filled on first Discord sign-in, editable in Account settings
 
   accounts Account[]
   sessions Session[]
@@ -237,7 +239,6 @@ model Character {
   dndBeyondSyncStatus   DndBeyondSyncStatus @default(NOT_LINKED)
   dndBeyondLastSyncedAt DateTime?
   dndBeyondSnapshot     Json?
-  discordUserId         String? // opts this player into @mentions on session proposed/cancelled Discord posts
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
 

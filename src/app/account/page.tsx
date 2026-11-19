@@ -9,10 +9,15 @@ import {
 } from "@/components/ui/card";
 import { ChangePasswordForm } from "@/components/auth/change-password-form";
 import { DateTimeFormatForm } from "@/components/account/date-time-format-form";
+import { DiscordIdForm } from "@/components/account/discord-id-form";
 
 export default async function AccountPage() {
   const userId = await requireUserId();
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  const discordAccount = await prisma.account.findFirst({
+    where: { userId, provider: "discord" },
+    select: { id: true },
+  });
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-6">
@@ -38,6 +43,21 @@ export default async function AccountPage() {
           </CardHeader>
           <CardContent className="pb-6">
             <DateTimeFormatForm timeFormat={user.timeFormat} dateFormat={user.dateFormat} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Discord</CardTitle>
+            <CardDescription>
+              Used to @mention you in Discord notifications for your campaigns.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pb-6">
+            <DiscordIdForm
+              discordUserId={user.discordUserId}
+              discordLinked={!!discordAccount}
+            />
           </CardContent>
         </Card>
 
