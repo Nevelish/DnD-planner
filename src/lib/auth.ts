@@ -20,6 +20,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           Discord({
             clientId: process.env.DISCORD_CLIENT_ID,
             clientSecret: process.env.DISCORD_CLIENT_SECRET,
+            // Discord added an `iss` parameter to OAuth callbacks on Oct 14
+            // 2026 (RFC 9207). Auth.js's built-in Discord provider doesn't
+            // set an issuer, so it falls back to a placeholder and rejects
+            // Discord's real one — https://github.com/nextauthjs/next-auth/pull/12694
+            issuer: "https://discord.com",
           }),
         ]
       : []),
