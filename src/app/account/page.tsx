@@ -10,6 +10,7 @@ import {
 import { ChangePasswordForm } from "@/components/auth/change-password-form";
 import { DateTimeFormatForm } from "@/components/account/date-time-format-form";
 import { DiscordIdForm } from "@/components/account/discord-id-form";
+import { ConnectDiscordButton } from "@/components/account/connect-discord-button";
 
 export default async function AccountPage() {
   const userId = await requireUserId();
@@ -18,6 +19,7 @@ export default async function AccountPage() {
     where: { userId, provider: "discord" },
     select: { id: true },
   });
+  const discordEnabled = !!process.env.DISCORD_CLIENT_ID;
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-6">
@@ -53,7 +55,8 @@ export default async function AccountPage() {
               Used to @mention you in Discord notifications for your campaigns.
             </CardDescription>
           </CardHeader>
-          <CardContent className="pb-6">
+          <CardContent className="flex flex-col gap-4 pb-6">
+            {discordEnabled && !discordAccount && <ConnectDiscordButton />}
             <DiscordIdForm
               discordUserId={user.discordUserId}
               discordLinked={!!discordAccount}
