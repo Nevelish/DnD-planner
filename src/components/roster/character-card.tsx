@@ -29,12 +29,26 @@ export function CharacterCard({
     <Card>
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
-          <div>
-            <CardTitle>{character.name}</CardTitle>
-            <CardDescription>
-              Level {character.level} {character.race ? `${character.race} ` : ""}
-              {character.class} · played by {ownerName}
-            </CardDescription>
+          <div className="flex items-start gap-3">
+            {character.portraitUrl && (
+              // D&D Beyond-hosted, not a known/fixed set of domains — a
+              // plain img avoids next/image's remote-host allowlist.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={character.portraitUrl}
+                alt=""
+                width={48}
+                height={48}
+                className="h-12 w-12 shrink-0 rounded-full border object-cover"
+              />
+            )}
+            <div>
+              <CardTitle>{character.name}</CardTitle>
+              <CardDescription>
+                Level {character.level} {character.race ? `${character.race} ` : ""}
+                {character.class} · played by {ownerName}
+              </CardDescription>
+            </div>
           </div>
           {isOwn && (
             <div className="flex items-center gap-1">
