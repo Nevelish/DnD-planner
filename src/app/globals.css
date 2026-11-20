@@ -296,3 +296,57 @@ body {
 .dark[data-skin="nier"] :is(input, textarea, select, button, a):focus-visible {
   outline-color: var(--color-slate-50);
 }
+
+/* ===================================================================
+   Landing page hero backdrop. Background-only artwork (no baked-in
+   text/UI), weighted to the right so the centered heading/copy sits
+   over its quiet left/center. One variant per light/dark x
+   default/nier skin combination — applied only via the .planner-hero
+   class on the signed-out homepage's hero container.
+   =================================================================== */
+:root {
+  --planner-backdrop: url("/backdrops/default-light.webp");
+  --planner-hero-veil: var(--background);
+}
+.dark {
+  --planner-backdrop: url("/backdrops/default-dark.webp");
+}
+:root[data-skin="nier"] {
+  --planner-backdrop: url("/backdrops/nier-light.webp");
+}
+.dark[data-skin="nier"] {
+  --planner-backdrop: url("/backdrops/nier-dark.webp");
+}
+
+.planner-hero {
+  min-height: calc(100vh - 3.5rem);
+  background-color: var(--planner-hero-veil);
+  background-image: var(--planner-backdrop);
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+/* Soft veil behind the text column so copy stays legible over the
+   artwork without hiding it outright. Scoped to .planner-hero-content's
+   own (padded) box via closest-side, rather than the full hero, so it
+   stays a halo around the text instead of covering the whole viewport. */
+.planner-hero-content {
+  position: relative;
+  padding: 3rem 4rem;
+}
+.planner-hero-content::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(ellipse closest-side, var(--planner-hero-veil) 0%, transparent 100%);
+  opacity: 0.8;
+}
+
+@media (max-width: 640px) {
+  /* The artwork's focal point shifts into view at narrow widths, so
+     the text needs a bit more protection than on desktop. */
+  .planner-hero { background-position: 58% center; }
+  .planner-hero-content::before { opacity: 0.95; }
+}
