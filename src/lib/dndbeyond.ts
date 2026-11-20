@@ -23,6 +23,8 @@ type DndBeyondCharacterData = {
   name?: string;
   race?: { fullName?: string; baseRaceName?: string };
   classes?: DndBeyondClass[];
+  avatarUrl?: string | null;
+  decorations?: { avatarUrl?: string | null };
 };
 
 export type DndBeyondFetchResult =
@@ -33,6 +35,7 @@ export type DndBeyondFetchResult =
       race?: string;
       level?: number;
       className?: string;
+      avatarUrl?: string;
     }
   | { status: "PRIVATE" | "FAILED" };
 
@@ -73,6 +76,7 @@ export async function fetchDndBeyondCharacter(
       race: data.race?.fullName ?? data.race?.baseRaceName,
       level: level || undefined,
       className: className || undefined,
+      avatarUrl: data.avatarUrl ?? data.decorations?.avatarUrl ?? undefined,
     };
   } catch {
     return { status: "FAILED" };

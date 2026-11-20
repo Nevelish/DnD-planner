@@ -234,6 +234,7 @@ model Character {
   level                 Int
   race                  String?
   notes                 String?             @db.Text
+  portraitUrl           String? // from D&D Beyond's avatarUrl on sync; no manual upload path
   dndBeyondUrl          String?
   dndBeyondCharacterId  String?
   dndBeyondSyncStatus   DndBeyondSyncStatus @default(NOT_LINKED)

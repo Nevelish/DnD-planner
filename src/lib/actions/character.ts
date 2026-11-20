@@ -90,6 +90,7 @@ export async function linkDndBeyond(
         race: result.race ?? character.race,
         level: result.level ?? character.level,
         class: result.className ?? character.class,
+        portraitUrl: result.avatarUrl ?? character.portraitUrl,
       },
     });
   } else {
