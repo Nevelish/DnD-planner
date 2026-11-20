@@ -27,9 +27,9 @@ export default async function NotesPage({
         }),
   ]);
 
-  const general = notes.find((n) => n.type === "GENERAL")?.content ?? "";
-  const prep = notes.find((n) => n.type === "NEXT_SESSION_PREP")?.content ?? "";
-  const party = notes.find((n) => n.type === "PARTY")?.content ?? "";
+  const generalNote = notes.find((n) => n.type === "GENERAL");
+  const prepNote = notes.find((n) => n.type === "NEXT_SESSION_PREP");
+  const partyNote = notes.find((n) => n.type === "PARTY");
 
   return (
     <div className="flex flex-col gap-6">
@@ -41,7 +41,12 @@ export default async function NotesPage({
               <CardDescription>Only you can see this.</CardDescription>
             </CardHeader>
             <CardContent className="pb-6">
-              <NotesEditor campaignId={campaignId} type="GENERAL" initialContent={general} />
+              <NotesEditor
+                campaignId={campaignId}
+                type="GENERAL"
+                initialContent={generalNote?.content ?? ""}
+                initialUpdatedAt={generalNote?.updatedAt.toISOString()}
+              />
             </CardContent>
           </Card>
 
@@ -54,7 +59,8 @@ export default async function NotesPage({
               <NotesEditor
                 campaignId={campaignId}
                 type="NEXT_SESSION_PREP"
-                initialContent={prep}
+                initialContent={prepNote?.content ?? ""}
+                initialUpdatedAt={prepNote?.updatedAt.toISOString()}
               />
             </CardContent>
           </Card>
@@ -72,7 +78,8 @@ export default async function NotesPage({
           <NotesEditor
             campaignId={campaignId}
             type="PARTY"
-            initialContent={party}
+            initialContent={partyNote?.content ?? ""}
+            initialUpdatedAt={partyNote?.updatedAt.toISOString()}
             placeholder="Shared loot, party decisions, lore everyone should know…"
           />
         </CardContent>
@@ -88,6 +95,7 @@ export default async function NotesPage({
             <NotesEditor
               campaignId={campaignId}
               initialContent={playerNote?.content ?? ""}
+              initialUpdatedAt={playerNote?.updatedAt.toISOString()}
               placeholder="Personal notes just for you…"
             />
           </CardContent>
