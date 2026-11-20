@@ -39,7 +39,7 @@ export function CharacterCard({
                 alt=""
                 width={48}
                 height={48}
-                className="h-12 w-12 shrink-0 rounded-full border object-cover"
+                className="relative h-12 w-12 shrink-0 cursor-zoom-in rounded-full border object-cover transition-transform duration-200 ease-out hover:z-20 hover:scale-[3] hover:shadow-lg"
               />
             )}
             <div>
