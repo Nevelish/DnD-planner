@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { upsertCampaignNote, upsertPlayerNote } from "@/lib/actions/notes";
@@ -15,28 +15,52 @@ export function NotesEditor({
   campaignId,
   type,
   initialContent,
+  initialUpdatedAt,
   placeholder,
 }: {
   campaignId: string;
   /** Omit for the current user's own private note (PlayerNote). */
   type?: CampaignNoteType;
   initialContent: string;
+  /** ISO timestamp of the loaded note, or undefined if it doesn't exist yet. */
+  initialUpdatedAt?: string;
   placeholder?: string;
 }) {
   const [content, setContent] = useState(initialContent);
+  const [lastSavedContent, setLastSavedContent] = useState(initialContent);
+  const [expectedUpdatedAt, setExpectedUpdatedAt] = useState(initialUpdatedAt);
   const [isPending, startTransition] = useTransition();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const isDirty = content !== lastSavedContent;
+
+  // Warn on tab close/refresh/navigating away by URL so an edit made but
+  // not saved isn't silently lost — the editor has no separate read-only
+  // view, so there's otherwise nothing stopping someone from typing,
+  // getting distracted, and closing the tab.
+  useEffect(() => {
+    if (!isDirty) return;
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
 
   function handleSave() {
     startTransition(async () => {
       try {
         const formData = new FormData();
         formData.set("content", content);
-        if (type) {
-          await upsertCampaignNote(campaignId, type, formData);
-        } else {
-          await upsertPlayerNote(campaignId, formData);
+        if (expectedUpdatedAt) {
+          formData.set("expectedUpdatedAt", expectedUpdatedAt);
         }
+        const result = type
+          ? await upsertCampaignNote(campaignId, type, formData)
+          : await upsertPlayerNote(campaignId, formData);
+        setExpectedUpdatedAt(result.updatedAt);
+        setLastSavedContent(content);
         toast.success("Saved.");
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Something went wrong.");
