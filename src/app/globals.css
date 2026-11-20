@@ -299,14 +299,14 @@ body {
 
 /* ===================================================================
    Landing page hero backdrop. Background-only artwork (no baked-in
-   text/UI), weighted to the right so the centered heading/copy sits
-   over its quiet left/center. One variant per light/dark x
-   default/nier skin combination — applied only via the .planner-hero
-   class on the signed-out homepage's hero container.
+   text/UI), faded down to a quiet ambient backdrop and weighted to
+   the right so the centered heading/copy sits over its quiet
+   left/center. One variant per light/dark x default/nier skin
+   combination — applied only via the .planner-hero class on the
+   signed-out homepage's hero container.
    =================================================================== */
 :root {
   --planner-backdrop: url("/backdrops/default-light.webp");
-  --planner-hero-veil: var(--background);
 }
 .dark {
   --planner-backdrop: url("/backdrops/default-dark.webp");
@@ -319,35 +319,28 @@ body {
 }
 
 .planner-hero {
-  min-height: calc(100vh - 3.5rem);
-  background-color: var(--planner-hero-veil);
-  background-image: var(--planner-backdrop);
-  background-position: center center;
-  background-size: cover;
-  background-repeat: no-repeat;
-}
-
-/* Soft veil behind the text column so copy stays legible over the
-   artwork without hiding it outright. Scoped to .planner-hero-content's
-   own (padded) box via closest-side, rather than the full hero, so it
-   stays a halo around the text instead of covering the whole viewport. */
-.planner-hero-content {
   position: relative;
   z-index: 0;
-  padding: 3rem 6rem;
+  min-height: calc(100vh - 3.5rem);
+  background-color: var(--background);
 }
-.planner-hero-content::before {
+
+/* A separate, lower layer (rather than .planner-hero's own
+   background-image) so its opacity fades only the artwork, not the
+   text above it. */
+.planner-hero::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: radial-gradient(ellipse closest-side, var(--planner-hero-veil) 0%, var(--planner-hero-veil) 82%, transparent 100%);
-  opacity: 0.92;
+  background-image: var(--planner-backdrop);
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: 0.4;
 }
 
 @media (max-width: 640px) {
-  /* The artwork's focal point shifts into view at narrow widths, so
-     the text needs a bit more protection than on desktop. */
-  .planner-hero { background-position: 58% center; }
-  .planner-hero-content::before { opacity: 0.95; }
+  /* The artwork's focal point shifts into view at narrow widths. */
+  .planner-hero::before { background-position: 58% center; }
 }

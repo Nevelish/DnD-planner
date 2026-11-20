@@ -10,25 +10,22 @@ export default async function HomePage() {
   if (session?.user) redirect("/dashboard");
 
   return (
-    <div className="planner-hero flex flex-1 flex-col items-center justify-center px-4">
-      <div className="planner-hero-content flex flex-col items-center gap-6 text-center">
-        <Image src="/icons/icon.svg" alt="" width={64} height={64} />
-        <h1 className="max-w-xl font-display text-4xl font-semibold tracking-tight">
-          Run your campaigns. Keep your party in sync.
-        </h1>
-        <p className="max-w-lg text-muted-foreground">
-          Create campaigns, keep DM notes and session prep private, propose
-          the next session date, and let your players RSVP — all in one
-          place.
-        </p>
-        <div className="flex gap-3">
-          <Button asChild size="lg">
-            <Link href="/signup">Get started</Link>
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <Link href="/signin">Sign in</Link>
-          </Button>
-        </div>
+    <div className="planner-hero flex flex-1 flex-col items-center justify-center gap-6 px-4 py-24 text-center">
+      <Image src="/icons/icon.svg" alt="" width={64} height={64} />
+      <h1 className="max-w-xl font-display text-4xl font-semibold tracking-tight">
+        Run your campaigns. Keep your party in sync.
+      </h1>
+      <p className="max-w-lg text-muted-foreground">
+        Create campaigns, keep DM notes and session prep private, propose the
+        next session date, and let your players RSVP — all in one place.
+      </p>
+      <div className="flex gap-3">
+        <Button asChild size="lg">
+          <Link href="/signup">Get started</Link>
+        </Button>
+        <Button asChild size="lg" variant="outline">
+          <Link href="/signin">Sign in</Link>
+        </Button>
       </div>
     </div>
   );
