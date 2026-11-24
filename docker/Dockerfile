@@ -24,7 +24,10 @@ RUN npm run build
 # itself, so Next's tracer doesn't pick it up — is always complete, with
 # every package's .bin symlinks intact for relative-asset resolution.
 FROM base AS runner
-RUN apk add --no-cache openssl
+# tzdata: Alpine ships without timezone files, so a TZ env var (e.g.
+# Europe/Oslo, used for scheduled reminder text) would otherwise be ignored
+# by everything but Node's own bundled zone data.
+RUN apk add --no-cache openssl tzdata
 WORKDIR /app
 ENV NODE_ENV=production
 
