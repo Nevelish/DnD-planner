@@ -4,7 +4,15 @@ import { useCallback, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FilePlusIcon, PinIcon, PinOffIcon, SearchIcon, Trash2Icon, XIcon } from "lucide-react";
+import {
+  FilePlusIcon,
+  LinkIcon,
+  PinIcon,
+  PinOffIcon,
+  SearchIcon,
+  Trash2Icon,
+  XIcon,
+} from "lucide-react";
 
 import {
   createDmPage,
@@ -12,6 +20,7 @@ import {
   renameDmPage,
   saveDmPage,
   setDmPagePinned,
+  linkMentionInPage,
 } from "@/lib/actions/dmPages";
 import { NOTE_TEMPLATES, type NoteTemplateKey } from "@/lib/noteTemplates";
 import { cn } from "@/lib/utils";
@@ -46,6 +55,8 @@ export type NotebookSelected = NotebookPage & {
   updatedAt: string;
   /** Pages with a [[link]] to this one. */
   backlinks: { id: string; label: string }[];
+  /** Pages that name this one in plain text, without linking it. */
+  mentions: { id: string; label: string }[];
   /** Just created: open on the editor rather than the preview. */
   startInEdit: boolean;
 };
@@ -400,6 +411,37 @@ export function DmNotebook({
                   >
                     {b.label}
                   </Link>
+                ))}
+              </div>
+            )}
+            {selected.mentions.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Mentioned in, not linked:</span>
+                {selected.mentions.map((m) => (
+                  <span key={m.id} className="inline-flex items-center rounded-md border">
+                    <Link
+                      href={hrefFor(m.id)}
+                      onClick={onNavigate}
+                      className="rounded-l-md px-2 py-0.5 hover:bg-muted"
+                    >
+                      {m.label}
+                    </Link>
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      aria-label={`Link ${selected.title} in ${m.label}`}
+                      title={`Turn the mention in ${m.label} into a link`}
+                      onClick={() =>
+                        run(
+                          () => linkMentionInPage(campaignId, m.id, selected.title),
+                          () => toast.success(`Linked in ${m.label}.`),
+                        )
+                      }
+                      className="inline-flex items-center gap-1 rounded-r-md border-l px-2 py-0.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                    >
+                      <LinkIcon className="size-3.5" /> Link
+                    </button>
+                  </span>
                 ))}
               </div>
             )}

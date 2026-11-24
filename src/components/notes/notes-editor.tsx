@@ -1,8 +1,18 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
 import { flushSync } from "react-dom";
 import { toast } from "sonner";
+import { LinkIcon, XIcon } from "lucide-react";
 
 import { upsertCampaignNote, upsertPlayerNote } from "@/lib/actions/notes";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,10 +21,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarkdownRenderer } from "@/components/notes/markdown-renderer";
 import { MarkdownToolbar } from "@/components/notes/markdown-toolbar";
 import { LinkingHelp } from "@/components/notes/linking-help";
-import { openWikiLinkQuery } from "@/lib/wikiLinks";
+import {
+  findUnlinkedMentions,
+  linkMention,
+  normalizeTitle,
+  openWikiLinkQuery,
+  wikiLinkTargets,
+} from "@/lib/wikiLinks";
+import { caretCoordinates } from "@/lib/caretCoordinates";
 import type { CampaignNoteType } from "@prisma/client";
 
 const MAX_SUGGESTIONS = 6;
+const MAX_MENTION_CHIPS = 3;
+const SUGGESTION_WIDTH = 256;
 
 export function NotesEditor({
   campaignId,
@@ -65,16 +84,49 @@ export function NotesEditor({
     if (linkQuery === null || !linkTargets) return [];
     const q = linkQuery.trim().toLowerCase();
     const starts = linkTargets.filter((t) => t.toLowerCase().startsWith(q));
-    const contains = linkTargets.filter((t) => !t.toLowerCase().startsWith(q) && t.toLowerCase().includes(q));
+    const contains = linkTargets.filter(
+      (t) => !t.toLowerCase().startsWith(q) && t.toLowerCase().includes(q),
+    );
     return [...starts, ...contains].slice(0, MAX_SUGGESTIONS);
   }, [linkQuery, linkTargets]);
   const showSuggestions = linkTargets !== undefined && linkQuery !== null;
+
+  // Where the [[ suggestions pop up: just under the caret.
+  const [popupAt, setPopupAt] = useState({ top: 0, left: 0 });
 
   function refreshLinkQuery(value: string, caret: number) {
     if (!linkTargets) return;
     const q = openWikiLinkQuery(value.slice(0, caret));
     setLinkQuery(q);
     if (q !== linkQuery) setActiveIndex(0);
+    const textarea = textareaRef.current;
+    if (q !== null && textarea) {
+      const { top, left, lineHeight } = caretCoordinates(textarea, caret);
+      setPopupAt({
+        top: top - textarea.scrollTop + lineHeight + 4,
+        left: Math.max(4, Math.min(left, textarea.clientWidth - SUGGESTION_WIDTH - 4)),
+      });
+    }
+  }
+
+  // Plain-text mentions of other pages, offered as "Link X?" chips. Worked
+  // out from a deferred copy of the text so typing never waits on it.
+  const deferredContent = useDeferredValue(content);
+  const [dismissedMentions, setDismissedMentions] = useState<Set<string>>(() => new Set());
+  const mentionChips = useMemo(() => {
+    if (!linkTargets) return [];
+    // Like a wiki: once a page is linked somewhere on this page, later
+    // plain mentions of it don't need a link too.
+    const linked = wikiLinkTargets(deferredContent);
+    return findUnlinkedMentions(deferredContent, linkTargets)
+      .filter((m) => !linked.has(normalizeTitle(m.title)))
+      .filter((m) => !dismissedMentions.has(normalizeTitle(m.title)))
+      .slice(0, MAX_MENTION_CHIPS);
+  }, [deferredContent, linkTargets, dismissedMentions]);
+
+  function linkPlainMention(title: string) {
+    const mention = findUnlinkedMentions(content, [title])[0];
+    if (mention) setContent(linkMention(content, mention));
   }
 
   function acceptSuggestion(title: string) {
@@ -206,55 +258,97 @@ export function NotesEditor({
           onChange={setContent}
           onPageLink={linkTargets ? startPageLink : undefined}
         />
-        <Textarea
-          ref={textareaRef}
-          value={content}
-          onChange={(e) => {
-            setContent(e.target.value);
-            refreshLinkQuery(e.target.value, e.target.selectionStart);
-          }}
-          onKeyDown={handleKeyDown}
-          onKeyUp={(e) => {
-            if (!["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(e.key)) {
-              refreshLinkQuery(e.currentTarget.value, e.currentTarget.selectionStart);
-            }
-          }}
-          onClick={(e) => refreshLinkQuery(e.currentTarget.value, e.currentTarget.selectionStart)}
-          onBlur={() => setLinkQuery(null)}
-          rows={14}
-          placeholder={placeholder ?? "Markdown supported — headings, lists, bold, links…"}
-          className="rounded-t-none font-mono text-sm"
-          aria-autocomplete={linkTargets ? "list" : undefined}
-          aria-controls={showSuggestions ? listboxId : undefined}
-          aria-expanded={linkTargets ? showSuggestions : undefined}
-        />
-        {showSuggestions && (
-          <div className="mt-1 rounded-md border bg-popover p-1 text-sm shadow-sm">
-            {suggestions.length > 0 ? (
-              <ul id={listboxId} role="listbox" aria-label="Link to a page">
-                {suggestions.map((title, i) => (
-                  <li
-                    key={title}
-                    role="option"
-                    aria-selected={i === activeIndex}
-                    // mousedown, not click: keep focus in the textarea
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      acceptSuggestion(title);
-                    }}
-                    className={`cursor-pointer rounded-sm px-2 py-1 ${i === activeIndex ? "bg-muted font-medium" : ""}`}
-                  >
-                    {title}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="px-2 py-1 text-muted-foreground">
-                {linkQuery?.trim()
-                  ? `No page called “${linkQuery.trim()}” yet. Close it with ]] and you can create it from the preview.`
-                  : "No other pages to link to yet. Type a title and close it with ]]."}
-              </p>
-            )}
+        <div className="relative">
+          <Textarea
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => {
+              setContent(e.target.value);
+              refreshLinkQuery(e.target.value, e.target.selectionStart);
+            }}
+            onKeyDown={handleKeyDown}
+            onKeyUp={(e) => {
+              if (!["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(e.key)) {
+                refreshLinkQuery(e.currentTarget.value, e.currentTarget.selectionStart);
+              }
+            }}
+            onClick={(e) => refreshLinkQuery(e.currentTarget.value, e.currentTarget.selectionStart)}
+            onBlur={() => setLinkQuery(null)}
+            onScroll={(e) => {
+              if (showSuggestions)
+                refreshLinkQuery(e.currentTarget.value, e.currentTarget.selectionStart);
+            }}
+            rows={14}
+            placeholder={placeholder ?? "Markdown supported — headings, lists, bold, links…"}
+            className="rounded-t-none font-mono text-sm"
+            aria-autocomplete={linkTargets ? "list" : undefined}
+            aria-controls={showSuggestions ? listboxId : undefined}
+            aria-expanded={linkTargets ? showSuggestions : undefined}
+          />
+          {showSuggestions && (
+            <div
+              className="absolute z-20 rounded-md border bg-popover p-1 text-sm shadow-md"
+              style={{
+                top: popupAt.top,
+                left: popupAt.left,
+                width: SUGGESTION_WIDTH,
+              }}
+            >
+              {suggestions.length > 0 ? (
+                <ul id={listboxId} role="listbox" aria-label="Link to a page">
+                  {suggestions.map((title, i) => (
+                    <li
+                      key={title}
+                      role="option"
+                      aria-selected={i === activeIndex}
+                      // mousedown, not click: keep focus in the textarea
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        acceptSuggestion(title);
+                      }}
+                      className={`cursor-pointer rounded-sm px-2 py-1 ${i === activeIndex ? "bg-muted font-medium" : ""}`}
+                    >
+                      {title}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-2 py-1 text-muted-foreground">
+                  {linkQuery?.trim()
+                    ? `No page called “${linkQuery.trim()}” yet. Close it with ]] and you can create it from the preview.`
+                    : "No other pages to link to yet. Type a title and close it with ]]."}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+        {!showSuggestions && mentionChips.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm" aria-live="polite">
+            {mentionChips.map((m) => (
+              <span
+                key={m.title}
+                className="inline-flex items-center rounded-full border bg-muted/40"
+              >
+                <button
+                  type="button"
+                  onClick={() => linkPlainMention(m.title)}
+                  className="inline-flex items-center gap-1.5 rounded-l-full py-0.5 pr-1 pl-2.5 hover:bg-muted"
+                >
+                  <LinkIcon className="size-3.5 text-muted-foreground" />
+                  Link “{m.text}”?
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Don't suggest linking ${m.title}`}
+                  onClick={() =>
+                    setDismissedMentions((prev) => new Set(prev).add(normalizeTitle(m.title)))
+                  }
+                  className="rounded-r-full py-0.5 pr-2 pl-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  <XIcon className="size-3.5" />
+                </button>
+              </span>
+            ))}
           </div>
         )}
       </TabsContent>
