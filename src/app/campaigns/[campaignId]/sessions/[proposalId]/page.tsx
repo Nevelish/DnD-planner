@@ -22,6 +22,7 @@ import { ConfirmProposalButton } from "@/components/sessions/confirm-proposal-bu
 import { CancelProposalButton } from "@/components/sessions/cancel-proposal-button";
 import { SessionPlace } from "@/components/sessions/session-place";
 import { RecapSection } from "@/components/sessions/recap-section";
+import { SessionPrepSection } from "@/components/sessions/session-prep-section";
 
 const statusVariant = {
   DRAFT: "secondary",
@@ -42,7 +43,7 @@ export default async function SessionDetailPage({
 
   await completePastSessions([campaignId]);
 
-  const [proposal, prefs] = await Promise.all([
+  const [proposal, prefs, prep] = await Promise.all([
     prisma.sessionProposal.findUnique({
       where: { id: proposalId, campaignId },
       include: {
@@ -51,6 +52,14 @@ export default async function SessionDetailPage({
       },
     }),
     getDateTimePrefs(userId),
+    // DM-only, and loaded on its own so it can never ride along with the
+    // session data that players get.
+    isDM
+      ? prisma.dmPage.findFirst({
+          where: { sessionProposalId: proposalId, campaignId },
+          select: { id: true, content: true, updatedAt: true },
+        })
+      : Promise.resolve(null),
   ]);
   if (!proposal) notFound();
 
@@ -123,6 +132,22 @@ export default async function SessionDetailPage({
           <RsvpList rsvps={proposal.rsvps} />
         </CardContent>
       </Card>
+
+      {isDM && (prep || proposal.status !== "CANCELLED") && (
+        <Card id="prep" className="scroll-mt-20">
+          <CardHeader>
+            <CardTitle>Prep</CardTitle>
+            <CardDescription>Only you can see this.</CardDescription>
+          </CardHeader>
+          <CardContent className="pb-6">
+            <SessionPrepSection
+              campaignId={campaignId}
+              proposalId={proposal.id}
+              initialPrep={prep && { ...prep, updatedAt: prep.updatedAt.toISOString() }}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {proposal.status === "COMPLETED" && (
         <Card>

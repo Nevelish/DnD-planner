@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { requireDM, requireMember } from "@/lib/permissions";
+import { requireMember } from "@/lib/permissions";
 import type { CampaignNoteType } from "@prisma/client";
 
 const MAX_NOTE_LENGTH = 100_000;
@@ -63,10 +63,12 @@ export async function upsertCampaignNote(
     ? new Date(String(expectedUpdatedAtRaw))
     : undefined;
 
-  // The party note is shared and editable by anyone in the campaign; the
-  // DM's own notes (general/prep) stay DM-only, same as before.
-  const membership =
-    type === "PARTY" ? await requireMember(campaignId) : await requireDM(campaignId);
+  // Only the shared party note is still saved here: the DM's own notes
+  // moved to the DM notebook (DmPage), so the legacy types are refused.
+  if (type !== "PARTY") {
+    throw new Error("These notes now live in the DM notebook.");
+  }
+  const membership = await requireMember(campaignId);
 
   const saved = await saveWithConflictCheck(
     () =>

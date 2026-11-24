@@ -106,16 +106,16 @@ async function main() {
     },
   });
 
-  await prisma.campaignNote.upsert({
-    where: { campaignId_type: { campaignId: campaign.id, type: "GENERAL" } },
-    update: {},
-    create: {
-      campaignId: campaign.id,
-      authorId: dm.id,
-      type: "GENERAL",
-      content: "## Campaign notes\n\nThe party just arrived in **Korvosa**.",
-    },
-  });
+  if ((await prisma.dmPage.count({ where: { campaignId: campaign.id } })) === 0) {
+    await prisma.dmPage.create({
+      data: {
+        campaignId: campaign.id,
+        title: "Campaign notes",
+        pinned: true,
+        content: "## Campaign notes\n\nThe party just arrived in **Korvosa**.",
+      },
+    });
+  }
 
   console.log("Seeded demo data:");
   console.log(`  DM login:      dm@example.com / password123`);

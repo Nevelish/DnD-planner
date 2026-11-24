@@ -138,6 +138,7 @@ model Campaign {
   notifications    Notification[]
   datePolls        DatePoll[]
   safetyEntries    SafetyEntry[]
+  dmPages          DmPage[]
 }
 
 model CampaignMember {
@@ -191,6 +192,7 @@ model SessionProposal {
   recurringRule RecurringRule? @relation(fields: [recurringRuleId], references: [id])
   rsvps         Rsvp[]
   datePoll      DatePoll?
+  prepPage      DmPage?
 
   @@index([campaignId, startsAt])
 }
@@ -335,8 +337,8 @@ model Character {
 }
 
 enum CampaignNoteType {
-  GENERAL
-  NEXT_SESSION_PREP
+  GENERAL // legacy: moved to a DmPage by 20261124230000_add_dm_pages, no longer read
+  NEXT_SESSION_PREP // legacy: moved to a DmPage (or a session's prep), no longer read
   PARTY
 }
 
@@ -437,4 +439,24 @@ model UserAvatar {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// A page in the DM's notebook: NPCs, locations, plot threads… or, when
+/// sessionProposalId is set, the prep for that session. DM-only, always:
+/// kept in its own table so it's never loaded along with a session or
+/// campaign that players can see.
+model DmPage {
+  id                String   @id @default(cuid())
+  campaignId        String
+  title             String
+  content           String   @default("") @db.Text
+  pinned            Boolean  @default(false)
+  sessionProposalId String?  @unique
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt // also the optimistic-concurrency version for edits
+
+  campaign        Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  sessionProposal SessionProposal? @relation(fields: [sessionProposalId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId, updatedAt])
 }
