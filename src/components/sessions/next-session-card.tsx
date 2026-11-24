@@ -104,7 +104,7 @@ export function NextSessionCard({
         )}
 
         {isDM && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <ProposeSessionDialog
               campaignId={campaignId}
               proposalId={proposal.id}

@@ -345,3 +345,25 @@ body {
   /* The artwork's focal point shifts into view at narrow widths. */
   .planner-hero::before { background-position: 58% center; }
 }
+
+/* The same artwork behind every page in the default skin, so signed-in
+   pages match the landing page. Fixed to the viewport (it doesn't scroll
+   or tile on long pages) and fainter than the hero, since cards and text
+   sit on top of it here. The landing hero paints its own stronger copy
+   over this, and the NieR skin keeps its own look. */
+:root:not([data-skin="nier"]) body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--planner-backdrop);
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: 0.25;
+}
+
+@media (max-width: 640px) {
+  :root:not([data-skin="nier"]) body::before { background-position: 58% center; }
+}
