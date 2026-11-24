@@ -1,11 +1,13 @@
 import { Badge } from "@/components/ui/badge";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import type { AvatarUser } from "@/lib/avatar";
 import type { RsvpStatus } from "@prisma/client";
 
 type RsvpRow = {
   id: string;
   status: RsvpStatus;
   cancellationReason: string | null;
-  member: { user: { id: string; name: string | null; email: string | null } };
+  member: { user: AvatarUser & { id: string; name: string | null; email: string | null } };
 };
 
 const statusVariant: Record<RsvpStatus, "success" | "warning" | "destructive" | "secondary"> = {
@@ -34,7 +36,8 @@ export function RsvpList({ rsvps }: { rsvps: RsvpRow[] }) {
       {rsvps.map((rsvp) => (
         <li key={rsvp.id} className="flex flex-col gap-1 px-4 py-3">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-medium">
+            <span className="flex min-w-0 items-center gap-2.5 text-sm font-medium">
+              <UserAvatar user={rsvp.member.user} className="size-7" />
               {rsvp.member.user.name ?? rsvp.member.user.email}
             </span>
             <Badge variant={statusVariant[rsvp.status]}>

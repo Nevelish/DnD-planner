@@ -12,6 +12,7 @@ import { DateTimeFormatForm } from "@/components/account/date-time-format-form";
 import { DiscordIdForm } from "@/components/account/discord-id-form";
 import { ConnectDiscordButton } from "@/components/account/connect-discord-button";
 import { NotificationPrefsForm } from "@/components/account/notification-prefs-form";
+import { AvatarUploader } from "@/components/account/avatar-uploader";
 
 export default async function AccountPage() {
   const userId = await requireUserId();
@@ -31,9 +32,21 @@ export default async function AccountPage() {
           <CardHeader>
             <CardTitle>Profile</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-1 pb-6 text-sm">
-            <p>{user.name}</p>
-            <p className="text-muted-foreground">{user.email}</p>
+          <CardContent className="flex flex-col gap-4 pb-6 text-sm">
+            <div className="flex flex-col gap-1">
+              <p>{user.name}</p>
+              <p className="text-muted-foreground">{user.email}</p>
+            </div>
+            <AvatarUploader
+              // Only what the picture needs: client props reach the browser.
+              user={{
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                image: user.image,
+                avatarUpdatedAt: user.avatarUpdatedAt,
+              }}
+            />
           </CardContent>
         </Card>
 

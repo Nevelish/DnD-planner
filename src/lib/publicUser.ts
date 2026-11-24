@@ -12,4 +12,5 @@ export const PUBLIC_USER_SELECT = {
   name: true,
   email: true,
   image: true,
+  avatarUpdatedAt: true,
 } as const satisfies Prisma.UserSelect;
