@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { postToDiscordWebhook } from "@/lib/discordWebhook";
 import { getRequestOrigin } from "@/lib/requestOrigin";
 import type { NotificationType } from "@prisma/client";
+import { MENTION_EVENT_TYPES } from "@/lib/notificationPrefs";
 
 // Fallback embed color per event type, used whenever a call site doesn't
 // supply its own override (e.g. RSVP_CHANGED's Yes/No-specific color).
@@ -19,18 +20,6 @@ const DEFAULT_DISCORD_EMBED_COLORS: Record<NotificationType, number> = {
   RSVP_CHANGED: 0xb87e40,
   RECURRING_DRAFT_READY: 0x8e6fbd,
 };
-
-// Event types worth @mentioning opted-in players for — the "this affects
-// your plans, go look" events. Deliberately excludes RSVP_CHANGED and
-// SESSION_CONFIRMED: pinging on every RSVP, or on a session merely being
-// locked in, would be exactly the noise the event-filter exists to avoid.
-const MENTION_EVENT_TYPES: NotificationType[] = [
-  "SESSION_PROPOSED",
-  "SESSION_RESCHEDULED",
-  "SESSION_CANCELLED",
-  "SESSION_REMINDER",
-  "DATE_POLL_OPENED",
-];
 
 /** Mirrors whatever just got written to the in-app Notification to the
  * campaign's Discord webhook, if one is configured AND this event type is
@@ -50,6 +39,8 @@ async function notifyDiscord(
     color?: number;
     /** Limit @mentions to these users instead of everyone in the campaign. */
     mentionUserIds?: string[];
+    /** Never @mention this user — the person who caused the event. */
+    excludeUserId?: string;
   },
 ) {
   if (!campaignId) return;
@@ -66,8 +57,15 @@ async function notifyDiscord(
     const members = await prisma.campaignMember.findMany({
       where: {
         campaignId,
-        user: { discordUserId: { not: null } },
-        ...(input.mentionUserIds ? { userId: { in: input.mentionUserIds } } : {}),
+        user: {
+          discordUserId: { not: null },
+          // Respects each person's Account → Notifications choices.
+          NOT: { mutedMentionTypes: { has: input.type } },
+        },
+        userId: {
+          ...(input.mentionUserIds ? { in: input.mentionUserIds } : {}),
+          ...(input.excludeUserId ? { not: input.excludeUserId } : {}),
+        },
       },
       select: { user: { select: { discordUserId: true } } },
     });
@@ -97,9 +95,16 @@ export async function createNotification(input: {
   link?: string;
   color?: number;
 }) {
-  const notification = await prisma.notification.create({ data: input });
-  await notifyDiscord(input.campaignId, input);
-  return notification;
+  const recipient = await prisma.user.findUnique({
+    where: { id: input.recipientId },
+    select: { mutedNotificationTypes: true },
+  });
+  // A muted type skips the in-app notification only; the channel post is
+  // the campaign's, not this person's, so it still goes out.
+  if (recipient && !recipient.mutedNotificationTypes.includes(input.type)) {
+    await prisma.notification.create({ data: input });
+  }
+  await notifyDiscord(input.campaignId, { ...input, mentionUserIds: [input.recipientId] });
 }
 
 /**
@@ -126,6 +131,7 @@ export async function notifyCampaignMembers(
         ...(input.excludeUserId ? { not: input.excludeUserId } : {}),
         ...(input.onlyUserIds ? { in: input.onlyUserIds } : {}),
       },
+      user: { NOT: { mutedNotificationTypes: { has: input.type } } },
     },
     select: { userId: true },
   });

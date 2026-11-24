@@ -11,6 +11,7 @@ import { ChangePasswordForm } from "@/components/auth/change-password-form";
 import { DateTimeFormatForm } from "@/components/account/date-time-format-form";
 import { DiscordIdForm } from "@/components/account/discord-id-form";
 import { ConnectDiscordButton } from "@/components/account/connect-discord-button";
+import { NotificationPrefsForm } from "@/components/account/notification-prefs-form";
 
 export default async function AccountPage() {
   const userId = await requireUserId();
@@ -60,6 +61,22 @@ export default async function AccountPage() {
             <DiscordIdForm
               discordUserId={user.discordUserId}
               discordLinked={!!discordAccount}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Notifications</CardTitle>
+            <CardDescription>
+              What you want to hear about, across all your campaigns.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pb-6">
+            <NotificationPrefsForm
+              mutedNotificationTypes={user.mutedNotificationTypes}
+              mutedMentionTypes={user.mutedMentionTypes}
+              hasDiscordId={!!user.discordUserId}
             />
           </CardContent>
         </Card>
