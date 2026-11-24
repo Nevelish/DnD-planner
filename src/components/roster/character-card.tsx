@@ -55,7 +55,13 @@ export function CharacterCard({
               <CharacterForm
                 campaignId={campaignId}
                 characterId={character.id}
-                defaultValues={character}
+                defaultValues={{
+                  name: character.name,
+                  class: character.class,
+                  level: character.level,
+                  race: character.race,
+                  notes: character.notes,
+                }}
                 trigger={
                   <button className="text-sm font-medium underline underline-offset-2">
                     Edit

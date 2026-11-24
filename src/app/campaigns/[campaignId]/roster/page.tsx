@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { PUBLIC_USER_SELECT } from "@/lib/publicUser";
 import { requireMembershipForPage } from "@/lib/permissions";
 import { CharacterCard } from "@/components/roster/character-card";
 import { CharacterForm } from "@/components/roster/character-form";
@@ -13,7 +14,7 @@ export default async function RosterPage({
 
   const characters = await prisma.character.findMany({
     where: { campaignId },
-    include: { member: { include: { user: true } } },
+    include: { member: { include: { user: { select: PUBLIC_USER_SELECT } } } },
     orderBy: { createdAt: "asc" },
   });
 

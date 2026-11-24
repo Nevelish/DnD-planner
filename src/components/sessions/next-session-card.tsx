@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { RsvpButtonGroup } from "@/components/sessions/rsvp-button-group";
 import { RsvpList } from "@/components/sessions/rsvp-list";
 import { ProposeSessionDialog } from "@/components/sessions/propose-session-dialog";
+import { proposalDefaults } from "@/lib/proposalDefaults";
 import { ConfirmProposalButton } from "@/components/sessions/confirm-proposal-button";
 import { CancelProposalButton } from "@/components/sessions/cancel-proposal-button";
 import { SessionPlace } from "@/components/sessions/session-place";
@@ -106,7 +107,7 @@ export function NextSessionCard({
               campaignId={campaignId}
               proposalId={proposal.id}
               mode="edit"
-              defaultValues={proposal}
+              defaultValues={proposalDefaults(proposal)}
               trigger={
                 <button className="text-sm font-medium underline underline-offset-2">
                   Edit

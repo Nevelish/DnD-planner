@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { prisma } from "@/lib/prisma";
+import { PUBLIC_USER_SELECT } from "@/lib/publicUser";
 import { requireMembershipForPage } from "@/lib/permissions";
 import { ensureUpcomingProposals } from "@/lib/recurring";
 import { completePastSessions } from "@/lib/completeSessions";
@@ -44,7 +45,7 @@ export default async function CampaignOverviewPage({
         startsAt: { gte: new Date() },
       },
       orderBy: { startsAt: "asc" },
-      include: { rsvps: { include: { member: { include: { user: true } } } } },
+      include: { rsvps: { include: { member: { include: { user: { select: PUBLIC_USER_SELECT } } } } } },
     }),
     isDM
       ? prisma.sessionProposal.findFirst({

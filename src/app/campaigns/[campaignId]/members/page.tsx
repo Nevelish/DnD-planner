@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { PUBLIC_USER_SELECT } from "@/lib/publicUser";
 import { requireMembershipForPage } from "@/lib/permissions";
 import { getRequestOrigin } from "@/lib/requestOrigin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +19,7 @@ export default async function MembersPage({
     prisma.campaign.findUniqueOrThrow({ where: { id: campaignId } }),
     prisma.campaignMember.findMany({
       where: { campaignId },
-      include: { user: true },
+      include: { user: { select: PUBLIC_USER_SELECT } },
       orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
     }),
     getRequestOrigin(),

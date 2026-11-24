@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { PUBLIC_USER_SELECT } from "@/lib/publicUser";
 import {
   Card,
   CardContent,
@@ -23,7 +24,7 @@ export default async function InvitePage({
 
   const campaign = await prisma.campaign.findUnique({
     where: { inviteCode: code },
-    include: { owner: true, _count: { select: { members: true } } },
+    include: { owner: { select: PUBLIC_USER_SELECT }, _count: { select: { members: true } } },
   });
   if (!campaign) notFound();
 
