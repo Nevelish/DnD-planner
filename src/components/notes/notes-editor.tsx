@@ -20,6 +20,7 @@ export function NotesEditor({
   save,
   onSaved,
   onCancel,
+  onDirtyChange,
 }: {
   campaignId: string;
   /** Omit for the current user's own private note (PlayerNote). */
@@ -33,6 +34,9 @@ export function NotesEditor({
   onSaved?: (saved: { content: string; updatedAt: string }) => void;
   /** Shows a Cancel button next to Save. */
   onCancel?: () => void;
+  /** Lets a parent warn before navigating away from unsaved changes (the
+   * beforeunload guard below only covers closing or reloading the tab). */
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [content, setContent] = useState(initialContent);
   const [lastSavedContent, setLastSavedContent] = useState(initialContent);
@@ -41,6 +45,10 @@ export function NotesEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isDirty = content !== lastSavedContent;
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   // Warn on tab close/refresh/navigating away by URL so an edit made but
   // not saved isn't silently lost — the editor has no separate read-only

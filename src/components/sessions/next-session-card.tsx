@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { formatSessionDateTimeForUser, type DateTimePrefs } from "@/lib/sessionDateFormat";
 import {
   Card,
@@ -114,6 +116,12 @@ export function NextSessionCard({
                 </button>
               }
             />
+            <Link
+              href={`/campaigns/${campaignId}/sessions/${proposal.id}#prep`}
+              className="text-sm font-medium underline underline-offset-2"
+            >
+              Prep
+            </Link>
             {proposal.status !== "CONFIRMED" && (
               <ConfirmProposalButton campaignId={campaignId} proposalId={proposal.id} />
             )}

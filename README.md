@@ -43,7 +43,12 @@ import, and in-app notifications.
   Calendar) that stays in sync as sessions change.
 - **Roster**: each player's character (name/class/level/race), with an
   optional best-effort import from a public D&D Beyond sheet.
-- **DM notes & session prep**: private markdown notes, visible only to the DM.
+- **DM notebook**: as many private pages as you like (NPCs, locations, plot
+  threads), with pinning, search, and templates (NPC, location, session
+  prep). Each session also gets its own DM-only prep, started from the
+  "Lazy DM" outline, so old prep stays next to that session's recap.
+  Players never see any of it. Party notes stay a shared page anyone can
+  edit, and each player keeps a private note.
 - **Notifications**: in-app bell + full history for invites, proposals,
   reschedules, confirmations, cancellations, and RSVP changes.
 - **Reminders**: an in-app (and optional Discord) reminder 24 hours before
