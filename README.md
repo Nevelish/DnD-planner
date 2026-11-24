@@ -15,8 +15,14 @@ import, and in-app notifications.
   another.
 - **Campaigns**: create, invite players via a shareable link or invite code
   (paste either into "Join campaign"), join/leave.
-- **Sessions & RSVP**: the DM proposes a date, players respond Yes/No. Backing
-  out after saying Yes asks for a quick reason, visible to the whole party.
+- **Sessions & RSVP**: the DM proposes a date, players respond Yes/Maybe/No.
+  Backing out after saying Yes asks for a quick reason, visible to the whole
+  party.
+- **Where & what**: mark a session as in person or online, with an address
+  or a Discord/VTT link (links are clickable), plus optional notes for the
+  players. New sessions start from the last session's place, and moving a
+  session (or taking it online) notifies the party. Both show up in the
+  .ics feed, so they land in everyone's calendar app.
 - **Date polls**: not sure which day works? The DM offers a few dates,
   players mark each Yes/Maybe/No, and the best one is highlighted. Picking
   it proposes the session with everyone's RSVP pre-filled from their vote.

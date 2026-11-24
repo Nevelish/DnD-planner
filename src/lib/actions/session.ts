@@ -8,12 +8,16 @@ import { proposalSchema } from "@/lib/validations/session";
 import { notifyCampaignMembers } from "@/lib/notifications";
 import { formatSessionDateTime } from "@/lib/sessionDateFormat";
 import { reminderSentAtFor } from "@/lib/sessionReminders";
+import { describePlace, placeSuffix } from "@/lib/sessionPlace";
 
 function parseProposalForm(formData: FormData) {
   const parsed = proposalSchema.safeParse({
     title: formData.get("title"),
     startsAt: formData.get("startsAt"),
     endsAt: formData.get("endsAt") || undefined,
+    format: formData.get("format"),
+    location: formData.get("location"),
+    description: formData.get("description"),
   });
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
@@ -34,9 +38,7 @@ export async function createProposal(campaignId: string, formData: FormData) {
       data: {
         campaignId,
         proposedById: dm.userId,
-        title: data.title,
-        startsAt: data.startsAt,
-        durationMinutes: data.durationMinutes,
+        ...data,
         status: "PROPOSED",
         reminderSentAt: reminderSentAtFor(data.startsAt),
       },
@@ -56,7 +58,7 @@ export async function createProposal(campaignId: string, formData: FormData) {
   await notifyCampaignMembers(campaignId, {
     type: "SESSION_PROPOSED",
     title: "New session proposed",
-    body: `${await formatSessionDateTime(proposal.startsAt)}${proposal.title ? ` — ${proposal.title}` : ""}`,
+    body: `${await formatSessionDateTime(proposal.startsAt)}${placeSuffix(proposal.format, proposal.location)}${proposal.title ? ` — ${proposal.title}` : ""}`,
     link: `/campaigns/${campaignId}/sessions/${proposal.id}`,
     excludeUserId: dm.userId,
   });
@@ -83,9 +85,7 @@ export async function publishDraft(
     await tx.sessionProposal.update({
       where: { id: proposalId, campaignId },
       data: {
-        title: data.title,
-        startsAt: data.startsAt,
-        durationMinutes: data.durationMinutes,
+        ...data,
         status: "PROPOSED",
         reminderSentAt: reminderSentAtFor(data.startsAt),
       },
@@ -105,7 +105,7 @@ export async function publishDraft(
   await notifyCampaignMembers(campaignId, {
     type: "SESSION_PROPOSED",
     title: "New session proposed",
-    body: `${await formatSessionDateTime(data.startsAt)}${data.title ? ` — ${data.title}` : ""}`,
+    body: `${await formatSessionDateTime(data.startsAt)}${placeSuffix(data.format, data.location)}${data.title ? ` — ${data.title}` : ""}`,
     link: `/campaigns/${campaignId}/sessions/${proposalId}`,
     excludeUserId: dm.userId,
   });
@@ -128,19 +128,32 @@ export async function updateProposal(
     where: { id: proposalId, campaignId },
   });
   const moved = before.startsAt.getTime() !== data.startsAt.getTime();
+  const placeChanged =
+    before.format !== data.format || before.location !== data.location;
   const updated = await prisma.sessionProposal.update({
     where: { id: proposalId, campaignId },
     // A new start time re-arms the reminder for the new date.
     data: moved ? { ...data, reminderSentAt: reminderSentAtFor(data.startsAt) } : data,
   });
 
-  // Drafts haven't been sent to players yet, and a title- or end-time-only
-  // edit doesn't move anyone's evening — only a new start time is news.
-  if (before.status !== "DRAFT" && moved) {
+  // Drafts haven't been sent to players yet, and a title-, end-time- or
+  // description-only edit doesn't change anyone's plans — a new start time
+  // or a new place (e.g. moving the game online) is news.
+  if (before.status !== "DRAFT" && (moved || placeChanged)) {
+    const when = moved
+      ? `${await formatSessionDateTime(before.startsAt)} → ${await formatSessionDateTime(updated.startsAt)}`
+      : await formatSessionDateTime(updated.startsAt);
+    const place = describePlace(updated.format, updated.location);
+    const where = place ? ` · ${place}` : placeChanged ? " · location to be announced" : "";
     await notifyCampaignMembers(campaignId, {
       type: "SESSION_RESCHEDULED",
-      title: "Session time changed",
-      body: `${await formatSessionDateTime(before.startsAt)} → ${await formatSessionDateTime(updated.startsAt)}${updated.title ? ` — ${updated.title}` : ""}`,
+      title:
+        moved && placeChanged
+          ? "Session time and location changed"
+          : moved
+            ? "Session time changed"
+            : "Session location changed",
+      body: `${when}${where}${updated.title ? ` — ${updated.title}` : ""}`,
       link: `/campaigns/${campaignId}/sessions/${proposalId}`,
       excludeUserId: dm.userId,
     });

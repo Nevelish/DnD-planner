@@ -6,21 +6,34 @@ function escapeText(value: string) {
     .replace(/\\/g, "\\\\")
     .replace(/;/g, "\\;")
     .replace(/,/g, "\\,")
+    .replace(/\r\n?/g, "\n")
     .replace(/\n/g, "\\n");
 }
 
 /** Folds a content line at 75 octets, per RFC 5545 §3.1 (continuation lines
- * start with a single space). Keeps feeds valid for strict calendar clients. */
+ * start with a single space). Counts UTF-8 bytes, not characters, so lines
+ * with æ/ø/å stay within the limit, and never splits a character in two.
+ * Keeps feeds valid for strict calendar clients. */
 function foldLine(line: string) {
-  if (line.length <= 75) return line;
+  const encoder = new TextEncoder();
+  if (encoder.encode(line).length <= 75) return line;
   const chunks: string[] = [];
-  let rest = line;
-  while (rest.length > 75) {
-    chunks.push(rest.slice(0, 75));
-    rest = " " + rest.slice(75);
+  let current = "";
+  let size = 0;
+  for (const char of line) {
+    const bytes = encoder.encode(char).length;
+    // Continuation lines spend one of their 75 octets on the leading space.
+    const limit = chunks.length === 0 ? 75 : 74;
+    if (size + bytes > limit) {
+      chunks.push(current);
+      current = "";
+      size = 0;
+    }
+    current += char;
+    size += bytes;
   }
-  chunks.push(rest);
-  return chunks.join("\r\n");
+  chunks.push(current);
+  return chunks.join("\r\n ");
 }
 
 function formatICSDate(date: Date) {
@@ -34,6 +47,8 @@ export type ICSEvent = {
   endsAt: Date;
   status: "TENTATIVE" | "CONFIRMED";
   url?: string;
+  location?: string;
+  description?: string;
   /** Adds a calendar-app alert this many minutes before the start. */
   alarmMinutesBefore?: number;
 };
@@ -58,6 +73,8 @@ export function buildICSFeed(calendarName: string, events: ICSEvent[]) {
       `DTEND:${formatICSDate(event.endsAt)}`,
       `SUMMARY:${escapeText(event.summary)}`,
       `STATUS:${event.status}`,
+      ...(event.location ? [`LOCATION:${escapeText(event.location)}`] : []),
+      ...(event.description ? [`DESCRIPTION:${escapeText(event.description)}`] : []),
       ...(event.url ? [`URL:${event.url}`] : []),
       ...(event.alarmMinutesBefore
         ? [

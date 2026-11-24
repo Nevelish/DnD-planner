@@ -8,6 +8,8 @@ import { createPollSchema, pollVoteSchema } from "@/lib/validations/poll";
 import { notifyCampaignMembers } from "@/lib/notifications";
 import { formatSessionDateTime } from "@/lib/sessionDateFormat";
 import { reminderSentAtFor } from "@/lib/sessionReminders";
+import { getLastSessionPlace } from "@/lib/lastSessionPlace";
+import { placeSuffix } from "@/lib/sessionPlace";
 
 function revalidatePoll(campaignId: string, pollId: string) {
   revalidatePath(`/campaigns/${campaignId}/polls/${pollId}`);
@@ -115,6 +117,7 @@ export async function decidePoll(campaignId: string, pollId: string, optionId: s
     select: { id: true },
   });
   const voteByMember = new Map(option.votes.map((v) => [v.memberId, v.choice]));
+  const place = await getLastSessionPlace(campaignId);
 
   const session = await prisma.$transaction(async (tx) => {
     // Claim the poll first so a double-click can't create two sessions.
@@ -133,6 +136,7 @@ export async function decidePoll(campaignId: string, pollId: string, optionId: s
         title: poll.title,
         startsAt: option.startsAt,
         durationMinutes: poll.durationMinutes,
+        ...place,
         status: "PROPOSED",
         reminderSentAt: reminderSentAtFor(option.startsAt),
       },
@@ -160,7 +164,7 @@ export async function decidePoll(campaignId: string, pollId: string, optionId: s
   await notifyCampaignMembers(campaignId, {
     type: "SESSION_PROPOSED",
     title: "Date picked for the next session",
-    body: `${await formatSessionDateTime(session.startsAt)}${session.title ? ` — ${session.title}` : ""}`,
+    body: `${await formatSessionDateTime(session.startsAt)}${placeSuffix(session.format, session.location)}${session.title ? ` — ${session.title}` : ""}`,
     link: `/campaigns/${campaignId}/sessions/${session.id}`,
     excludeUserId: dm.userId,
   });

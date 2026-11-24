@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { notifyCampaignMembers } from "@/lib/notifications";
 import { formatSessionDateTimeInTimeZone } from "@/lib/sessionDateFormat";
+import { placeSuffix } from "@/lib/sessionPlace";
 import { getServerTimeZone } from "@/lib/timezone";
 
 const REMINDER_LEAD_MS = 24 * 60 * 60_000;
@@ -55,7 +56,7 @@ export async function sendDueReminders() {
     await notifyCampaignMembers(session.campaignId, {
       type: "SESSION_REMINDER",
       title: `Reminder: ${session.title || "session"} coming up`,
-      body: `${formatSessionDateTimeInTimeZone(session.startsAt, getServerTimeZone())} — ${session.campaign.name}`,
+      body: `${formatSessionDateTimeInTimeZone(session.startsAt, getServerTimeZone())}${placeSuffix(session.format, session.location)} — ${session.campaign.name}`,
       link: `/campaigns/${session.campaignId}/sessions/${session.id}`,
       onlyUserIds: recipients,
     });

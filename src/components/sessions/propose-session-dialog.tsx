@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { CalendarPlusIcon } from "lucide-react";
+import { CalendarPlusIcon, MapPinIcon, MonitorIcon } from "lucide-react";
+import type { SessionFormat } from "@prisma/client";
 
 import { createProposal, updateProposal, publishDraft } from "@/lib/actions/session";
 import {
@@ -13,6 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +31,21 @@ type ProposalDefaults = {
   title?: string | null;
   startsAt?: Date | null;
   durationMinutes?: number | null;
+  format?: SessionFormat | null;
+  location?: string | null;
+  description?: string | null;
 };
+
+const FORMAT_OPTIONS = [
+  { value: "IN_PERSON", label: "In person", icon: MapPinIcon },
+  { value: "ONLINE", label: "Online", icon: MonitorIcon },
+] as const;
+
+const LOCATION_FIELD = {
+  IN_PERSON: { label: "Address or place", placeholder: "Sam's place, Storgata 12" },
+  ONLINE: { label: "Link or platform", placeholder: "https://discord.gg/… or Roll20" },
+  UNSET: { label: "Location", placeholder: "A place, or a link for online games" },
+} as const;
 
 const DEFAULT_DURATION_MINUTES = 180;
 
@@ -54,12 +71,18 @@ function ProposalFormFields({
 
   const [startsAt, setStartsAt] = useState(initialStart);
   const [endsAt, setEndsAt] = useState(initialEnd);
-  const [endTouched, setEndTouched] = useState(!!initialEnd);
+  // Until the DM edits the end time by hand, it follows the start so the
+  // session keeps its length (e.g. moving an existing session a day later
+  // moves its end too, instead of leaving it on the old date).
+  const [endTouched, setEndTouched] = useState(false);
+  const length = defaultValues?.durationMinutes ?? DEFAULT_DURATION_MINUTES;
+  const [format, setFormat] = useState<SessionFormat | null>(defaultValues?.format ?? null);
+  const locationField = LOCATION_FIELD[format ?? "UNSET"];
 
   function handleStartChange(value: string) {
     setStartsAt(value);
     if (!endTouched) {
-      setEndsAt(value ? addMinutesToLocalValue(value, DEFAULT_DURATION_MINUTES) : "");
+      setEndsAt(value ? addMinutesToLocalValue(value, length) : "");
     }
   }
 
@@ -103,6 +126,50 @@ function ProposalFormFields({
             onChange={(e) => handleEndChange(e.target.value)}
           />
         </div>
+      </div>
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-1.5 text-sm font-medium">Where are you playing?</legend>
+        {/* Toggle buttons rather than radios so the DM can unset it again;
+            tapping the active option clears it. */}
+        <input type="hidden" name="format" value={format ?? ""} />
+        <div className="grid grid-cols-2 gap-2">
+          {FORMAT_OPTIONS.map(({ value, label, icon: Icon }) => (
+            <Button
+              key={value}
+              type="button"
+              variant="outline"
+              aria-pressed={format === value}
+              onClick={() => setFormat(format === value ? null : value)}
+              className={cn(
+                format === value &&
+                  "border-primary bg-primary/10 text-foreground hover:bg-primary/15",
+              )}
+            >
+              <Icon /> {label}
+            </Button>
+          ))}
+        </div>
+      </fieldset>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="location">{locationField.label} (optional)</Label>
+        <Input
+          id="location"
+          name="location"
+          maxLength={200}
+          defaultValue={defaultValues?.location ?? ""}
+          placeholder={locationField.placeholder}
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="description">Notes for players (optional)</Label>
+        <Textarea
+          id="description"
+          name="description"
+          maxLength={2000}
+          rows={3}
+          defaultValue={defaultValues?.description ?? ""}
+          placeholder="Bring snacks — we're finishing the heist."
+        />
       </div>
       <DialogFooter>
         <Button type="submit" disabled={isPending}>

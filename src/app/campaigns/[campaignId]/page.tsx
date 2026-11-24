@@ -17,6 +17,7 @@ import { NextSessionCard } from "@/components/sessions/next-session-card";
 import { DraftProposalCard } from "@/components/sessions/draft-proposal-card";
 import { OpenPollCard } from "@/components/polls/open-poll-card";
 import { getOpenPolls } from "@/lib/openPolls";
+import { getLastSessionPlace } from "@/lib/lastSessionPlace";
 
 export default async function CampaignOverviewPage({
   params,
@@ -32,7 +33,7 @@ export default async function CampaignOverviewPage({
     completePastSessions([campaignId]),
   ]);
 
-  const [campaign, memberCount, nextProposal, draftProposal, prefs, { polls, playerCount }] = await Promise.all([
+  const [campaign, memberCount, nextProposal, draftProposal, prefs, { polls, playerCount }, lastPlace] = await Promise.all([
     prisma.campaign.findUniqueOrThrow({ where: { id: campaignId } }),
     prisma.campaignMember.count({ where: { campaignId } }),
     prisma.sessionProposal.findFirst({
@@ -52,6 +53,7 @@ export default async function CampaignOverviewPage({
       : Promise.resolve(null),
     getDateTimePrefs(userId),
     getOpenPolls(campaignId),
+    isDM ? getLastSessionPlace(campaignId) : undefined,
   ]);
 
   return (
@@ -105,6 +107,7 @@ export default async function CampaignOverviewPage({
         isDM={isDM}
         currentMemberId={membership.id}
         prefs={prefs}
+        lastPlace={lastPlace}
       />
     </div>
   );

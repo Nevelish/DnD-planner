@@ -161,6 +161,9 @@ model SessionProposal {
   title           String?
   startsAt        DateTime
   durationMinutes Int?
+  format          SessionFormat? // in person or online; null = not said
+  location        String? // an address/place, or a link/platform for online games
+  description     String?               @db.Text
   status          SessionProposalStatus @default(PROPOSED)
   recurringRuleId String?
   cancelReason    String?               @db.Text
@@ -175,6 +178,11 @@ model SessionProposal {
   datePoll      DatePoll?
 
   @@index([campaignId, startsAt])
+}
+
+enum SessionFormat {
+  IN_PERSON
+  ONLINE
 }
 
 enum RsvpStatus {

@@ -18,6 +18,7 @@ import { RsvpList } from "@/components/sessions/rsvp-list";
 import { ProposeSessionDialog } from "@/components/sessions/propose-session-dialog";
 import { ConfirmProposalButton } from "@/components/sessions/confirm-proposal-button";
 import { CancelProposalButton } from "@/components/sessions/cancel-proposal-button";
+import { SessionPlace } from "@/components/sessions/session-place";
 
 const statusVariant = {
   DRAFT: "secondary",
@@ -70,6 +71,12 @@ export default async function SessionDetailPage({
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 pb-6">
+          <SessionPlace
+            format={proposal.format}
+            location={proposal.location}
+            description={proposal.description}
+          />
+
           {proposal.status === "CANCELLED" && proposal.cancelReason && (
             <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
               Cancelled: &ldquo;{proposal.cancelReason}&rdquo;
