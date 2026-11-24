@@ -16,7 +16,13 @@ export type CalendarSession = {
   title: string | null;
   startsAt: string;
   durationMinutes: number | null;
-  status: "PROPOSED" | "CONFIRMED";
+  status: "PROPOSED" | "CONFIRMED" | "COMPLETED";
+};
+
+const EVENT_CLASS: Record<CalendarSession["status"], string> = {
+  PROPOSED: "rbc-event-proposed",
+  CONFIRMED: "rbc-event-confirmed",
+  COMPLETED: "rbc-event-completed",
 };
 
 export function CampaignCalendar({
@@ -66,10 +72,7 @@ export function CampaignCalendar({
           )
         }
         eventPropGetter={(event) => ({
-          className:
-            event.resource.status === "CONFIRMED"
-              ? "rbc-event-confirmed"
-              : "rbc-event-proposed",
+          className: EVENT_CLASS[(event.resource as CalendarSession).status],
         })}
       />
     </div>

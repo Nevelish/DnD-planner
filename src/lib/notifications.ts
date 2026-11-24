@@ -11,16 +11,22 @@ const DEFAULT_DISCORD_EMBED_COLORS: Record<NotificationType, number> = {
   MEMBER_JOINED: 0x57a64a,
   MEMBER_LEFT: 0xd9822b,
   SESSION_PROPOSED: 0x3a7ca5,
+  SESSION_RESCHEDULED: 0xe0a33a,
+  SESSION_CONFIRMED: 0x57a64a,
   SESSION_CANCELLED: 0xd9534f,
   RSVP_CHANGED: 0xb87e40,
   RECURRING_DRAFT_READY: 0x8e6fbd,
 };
 
-// Event types worth @mentioning opted-in players for — the two "this
-// affects your plans, go look" events. Deliberately excludes RSVP_CHANGED:
-// pinging on every RSVP would be exactly the noise the event-filter exists
-// to avoid.
-const MENTION_EVENT_TYPES: NotificationType[] = ["SESSION_PROPOSED", "SESSION_CANCELLED"];
+// Event types worth @mentioning opted-in players for — the "this affects
+// your plans, go look" events. Deliberately excludes RSVP_CHANGED and
+// SESSION_CONFIRMED: pinging on every RSVP, or on a session merely being
+// locked in, would be exactly the noise the event-filter exists to avoid.
+const MENTION_EVENT_TYPES: NotificationType[] = [
+  "SESSION_PROPOSED",
+  "SESSION_RESCHEDULED",
+  "SESSION_CANCELLED",
+];
 
 /** Mirrors whatever just got written to the in-app Notification to the
  * campaign's Discord webhook, if one is configured AND this event type is

@@ -145,6 +145,16 @@ export function ProposeSessionDialog({
   const [isPending, startTransition] = useTransition();
 
   function handleSubmit(formData: FormData) {
+    // datetime-local values carry no timezone; the browser reads them as its
+    // own local time, while the server would read them in the container's
+    // (UTC). Sending an absolute instant keeps what the DM typed intact.
+    for (const key of ["startsAt", "endsAt"]) {
+      const value = formData.get(key);
+      if (typeof value !== "string" || !value) continue;
+      const date = new Date(value);
+      if (!Number.isNaN(date.getTime())) formData.set(key, date.toISOString());
+    }
+
     startTransition(async () => {
       try {
         if (mode === "create") {

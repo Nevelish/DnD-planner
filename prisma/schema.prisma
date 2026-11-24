@@ -113,7 +113,7 @@ model Campaign {
   ownerId              String
   inviteCode           String             @unique
   discordWebhookUrl    String? // posts campaign notifications (session proposed/cancelled, RSVP, etc.) to Discord
-  discordWebhookEvents NotificationType[] @default([SESSION_PROPOSED, SESSION_CANCELLED, RSVP_CHANGED, MEMBER_JOINED, MEMBER_LEFT, RECURRING_DRAFT_READY]) // which event types actually post to discordWebhookUrl
+  discordWebhookEvents NotificationType[] @default([SESSION_PROPOSED, SESSION_RESCHEDULED, SESSION_CONFIRMED, SESSION_CANCELLED, RSVP_CHANGED, MEMBER_JOINED, MEMBER_LEFT, RECURRING_DRAFT_READY]) // which event types actually post to discordWebhookUrl
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 
@@ -296,6 +296,8 @@ enum NotificationType {
   SESSION_CANCELLED
   RSVP_CHANGED
   RECURRING_DRAFT_READY
+  SESSION_RESCHEDULED
+  SESSION_CONFIRMED
 }
 
 model Notification {

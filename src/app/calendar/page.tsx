@@ -4,7 +4,8 @@ import { ensureUpcomingProposals } from "@/lib/recurring";
 import { ensureCalendarToken } from "@/lib/calendarToken";
 import { getRequestOrigin } from "@/lib/requestOrigin";
 import { getDateTimePrefs, weekStartsOnForUser } from "@/lib/sessionDateFormat";
-import { CampaignCalendar } from "@/components/calendar/campaign-calendar";
+import { CampaignCalendar, type CalendarSession } from "@/components/calendar/campaign-calendar";
+import { completePastSessions } from "@/lib/completeSessions";
 import { SubscribeCalendarBox } from "@/components/calendar/subscribe-calendar-box";
 import {
   Card,
@@ -22,23 +23,24 @@ export default async function CalendarPage() {
     select: { campaignId: true, role: true },
   });
 
-  const [, calendarToken, origin, prefs] = await Promise.all([
+  const campaignIds = memberships.map((m) => m.campaignId);
+
+  const [, , calendarToken, origin, prefs] = await Promise.all([
     Promise.all(
       memberships
         .filter((m) => m.role === "DM")
         .map((m) => ensureUpcomingProposals(m.campaignId)),
     ),
+    completePastSessions(campaignIds),
     ensureCalendarToken(userId),
     getRequestOrigin(),
     getDateTimePrefs(userId),
   ]);
 
-  const campaignIds = memberships.map((m) => m.campaignId);
-
   const proposals = await prisma.sessionProposal.findMany({
     where: {
       campaignId: { in: campaignIds },
-      status: { in: ["PROPOSED", "CONFIRMED"] },
+      status: { in: ["PROPOSED", "CONFIRMED", "COMPLETED"] },
     },
     include: { campaign: { select: { name: true } } },
     orderBy: { startsAt: "asc" },
@@ -51,7 +53,7 @@ export default async function CalendarPage() {
     title: p.title,
     startsAt: p.startsAt.toISOString(),
     durationMinutes: p.durationMinutes,
-    status: p.status as "PROPOSED" | "CONFIRMED",
+    status: p.status as CalendarSession["status"],
   }));
 
   return (

@@ -54,7 +54,7 @@ export async function createProposal(campaignId: string, formData: FormData) {
   await notifyCampaignMembers(campaignId, {
     type: "SESSION_PROPOSED",
     title: "New session proposed",
-    body: `${formatSessionDateTime(proposal.startsAt)}${proposal.title ? ` — ${proposal.title}` : ""}`,
+    body: `${await formatSessionDateTime(proposal.startsAt)}${proposal.title ? ` — ${proposal.title}` : ""}`,
     link: `/campaigns/${campaignId}/sessions/${proposal.id}`,
     excludeUserId: dm.userId,
   });
@@ -79,7 +79,7 @@ export async function publishDraft(
 
   await prisma.$transaction(async (tx) => {
     await tx.sessionProposal.update({
-      where: { id: proposalId },
+      where: { id: proposalId, campaignId },
       data: {
         title: data.title,
         startsAt: data.startsAt,
@@ -102,7 +102,7 @@ export async function publishDraft(
   await notifyCampaignMembers(campaignId, {
     type: "SESSION_PROPOSED",
     title: "New session proposed",
-    body: `${formatSessionDateTime(data.startsAt)}${data.title ? ` — ${data.title}` : ""}`,
+    body: `${await formatSessionDateTime(data.startsAt)}${data.title ? ` — ${data.title}` : ""}`,
     link: `/campaigns/${campaignId}/sessions/${proposalId}`,
     excludeUserId: dm.userId,
   });
@@ -118,27 +118,64 @@ export async function updateProposal(
   proposalId: string,
   formData: FormData,
 ) {
-  await requireDM(campaignId);
+  const dm = await requireDM(campaignId);
   const data = parseProposalForm(formData);
 
-  await prisma.sessionProposal.update({
-    where: { id: proposalId },
+  const before = await prisma.sessionProposal.findUniqueOrThrow({
+    where: { id: proposalId, campaignId },
+  });
+  const updated = await prisma.sessionProposal.update({
+    where: { id: proposalId, campaignId },
     data,
   });
 
+  // Drafts haven't been sent to players yet, and a title- or end-time-only
+  // edit doesn't move anyone's evening — only a new start time is news.
+  if (before.status !== "DRAFT" && before.startsAt.getTime() !== updated.startsAt.getTime()) {
+    await notifyCampaignMembers(campaignId, {
+      type: "SESSION_RESCHEDULED",
+      title: "Session time changed",
+      body: `${await formatSessionDateTime(before.startsAt)} → ${await formatSessionDateTime(updated.startsAt)}${updated.title ? ` — ${updated.title}` : ""}`,
+      link: `/campaigns/${campaignId}/sessions/${proposalId}`,
+      excludeUserId: dm.userId,
+    });
+  }
+
   revalidatePath(`/campaigns/${campaignId}/sessions/${proposalId}`);
   revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/campaigns/${campaignId}/sessions`);
   revalidatePath("/calendar");
+  revalidatePath("/dashboard");
 }
 
 export async function confirmProposal(campaignId: string, proposalId: string) {
-  await requireDM(campaignId);
-  await prisma.sessionProposal.update({
-    where: { id: proposalId },
+  const dm = await requireDM(campaignId);
+
+  // Only a still-proposed session can be confirmed; a count of 0 means it
+  // was already confirmed (e.g. a double-click), so don't notify twice.
+  const { count } = await prisma.sessionProposal.updateMany({
+    where: { id: proposalId, campaignId, status: "PROPOSED" },
     data: { status: "CONFIRMED" },
   });
+
+  if (count > 0) {
+    const confirmed = await prisma.sessionProposal.findUniqueOrThrow({
+      where: { id: proposalId },
+    });
+    await notifyCampaignMembers(campaignId, {
+      type: "SESSION_CONFIRMED",
+      title: "Session confirmed",
+      body: `${await formatSessionDateTime(confirmed.startsAt)}${confirmed.title ? ` — ${confirmed.title}` : ""}`,
+      link: `/campaigns/${campaignId}/sessions/${proposalId}`,
+      excludeUserId: dm.userId,
+    });
+  }
+
   revalidatePath(`/campaigns/${campaignId}/sessions/${proposalId}`);
   revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/campaigns/${campaignId}/sessions`);
+  revalidatePath("/calendar");
+  revalidatePath("/dashboard");
 }
 
 export async function cancelProposal(
@@ -149,14 +186,14 @@ export async function cancelProposal(
   await requireDM(campaignId);
 
   const cancelled = await prisma.sessionProposal.update({
-    where: { id: proposalId },
+    where: { id: proposalId, campaignId },
     data: { status: "CANCELLED", cancelReason: reason },
   });
 
   await notifyCampaignMembers(campaignId, {
     type: "SESSION_CANCELLED",
     title: "Session cancelled",
-    body: `${formatSessionDateTime(cancelled.startsAt)}${reason ? ` — ${reason}` : ""}`,
+    body: `${await formatSessionDateTime(cancelled.startsAt)}${reason ? ` — ${reason}` : ""}`,
     link: `/campaigns/${campaignId}/sessions/${proposalId}`,
   });
 

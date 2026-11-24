@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/permissions";
 import { ensureUpcomingProposals } from "@/lib/recurring";
+import { completePastSessions } from "@/lib/completeSessions";
 import {
   formatCompactDateTimeForUser,
   getDateTimePrefs,
@@ -21,13 +22,16 @@ import { Button } from "@/components/ui/button";
 export default async function DashboardPage() {
   const userId = await requireUserId();
 
-  const dmMemberships = await prisma.campaignMember.findMany({
-    where: { userId, role: "DM" },
-    select: { campaignId: true },
+  const allMemberships = await prisma.campaignMember.findMany({
+    where: { userId },
+    select: { campaignId: true, role: true },
   });
-  await Promise.all(
-    dmMemberships.map((m) => ensureUpcomingProposals(m.campaignId)),
-  );
+  await Promise.all([
+    ...allMemberships
+      .filter((m) => m.role === "DM")
+      .map((m) => ensureUpcomingProposals(m.campaignId)),
+    completePastSessions(allMemberships.map((m) => m.campaignId)),
+  ]);
 
   const prefs = await getDateTimePrefs(userId);
 

@@ -24,6 +24,8 @@ const DISCORD_WEBHOOK_URL_PATTERN =
 // so there's nothing meaningful to toggle for it.
 export const DISCORD_WEBHOOK_EVENT_TYPES = [
   "SESSION_PROPOSED",
+  "SESSION_RESCHEDULED",
+  "SESSION_CONFIRMED",
   "SESSION_CANCELLED",
   "RSVP_CHANGED",
   "MEMBER_JOINED",
@@ -36,6 +38,8 @@ export const DISCORD_WEBHOOK_EVENT_LABELS: Record<
   string
 > = {
   SESSION_PROPOSED: "New session proposed",
+  SESSION_RESCHEDULED: "Session time changed",
+  SESSION_CONFIRMED: "Session confirmed",
   SESSION_CANCELLED: "Session cancelled",
   RSVP_CHANGED: "RSVP updated",
   MEMBER_JOINED: "Player joined",

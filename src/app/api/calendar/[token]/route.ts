@@ -26,7 +26,9 @@ export async function GET(
   const proposals = await prisma.sessionProposal.findMany({
     where: {
       campaignId: { in: campaignIds },
-      status: { in: ["PROPOSED", "CONFIRMED"] },
+      // COMPLETED too: past sessions should stay in subscribers' calendars,
+      // not disappear from them once they're over.
+      status: { in: ["PROPOSED", "CONFIRMED", "COMPLETED"] },
     },
     include: { campaign: { select: { name: true } } },
     orderBy: { startsAt: "asc" },
@@ -44,7 +46,7 @@ export async function GET(
       summary: `${p.title || "Session"} — ${p.campaign.name}`,
       startsAt,
       endsAt,
-      status: p.status === "CONFIRMED" ? "CONFIRMED" : "TENTATIVE",
+      status: p.status === "PROPOSED" ? "TENTATIVE" : "CONFIRMED",
       url: `${origin}/campaigns/${p.campaignId}/sessions/${p.id}`,
     };
   });
