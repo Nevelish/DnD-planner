@@ -7,7 +7,7 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 
 # ---- builder: generate prisma client and build the Next.js app ----
 FROM base AS builder

@@ -9,9 +9,18 @@ permissions:
   contents: read
   packages: write
 
+# A newer push to main cancels a build that's still running, so an older
+# build can never finish last and overwrite :latest with an older image.
+concurrency:
+  group: docker-publish-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # A normal build takes 3-10 minutes. Without this, a hung step (e.g. a
+    # stalled npm download) would sit for GitHub's default of 6 hours.
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
