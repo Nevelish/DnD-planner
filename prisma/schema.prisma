@@ -28,19 +28,23 @@ enum DateFormat {
 }
 
 model User {
-  id            String     @id @default(cuid())
-  name          String?
-  email         String?    @unique
-  emailVerified DateTime?
-  image         String?
-  passwordHash  String? // null for Discord-only accounts
-  calendarToken String?    @unique // secret token for the .ics subscription feed
-  role          UserRole   @default(USER)
-  disabled      Boolean    @default(false) // blocks sign-in without deleting their campaigns/notes/RSVPs
-  timeFormat    TimeFormat @default(HOUR_24)
-  dateFormat    DateFormat @default(DMY)
-  discordUserId String? // opts this account into @mentions on session proposed/cancelled Discord posts;
+  id                     String             @id @default(cuid())
+  name                   String?
+  email                  String?            @unique
+  emailVerified          DateTime?
+  image                  String?
+  passwordHash           String? // null for Discord-only accounts
+  calendarToken          String?            @unique // secret token for the .ics subscription feed
+  role                   UserRole           @default(USER)
+  disabled               Boolean            @default(false) // blocks sign-in without deleting their campaigns/notes/RSVPs
+  timeFormat             TimeFormat         @default(HOUR_24)
+  dateFormat             DateFormat         @default(DMY)
+  discordUserId          String? // opts this account into @mentions on session proposed/cancelled Discord posts;
   // auto-filled on first Discord sign-in, editable in Account settings
+  // Opt-outs rather than opt-ins, so event types added later are on by
+  // default. Set in Account settings → Notifications.
+  mutedNotificationTypes NotificationType[] @default([]) // no in-app notification for these
+  mutedMentionTypes      NotificationType[] @default([]) // no Discord @mention for these
 
   accounts Account[]
   sessions Session[]

@@ -40,6 +40,9 @@ import, and in-app notifications.
   each session, to the DM and everyone who hasn't said No, plus a
   calendar-app alert an hour before via the .ics feed. Set `TZ` (e.g.
   `Europe/Oslo`) so reminder times read in your group's timezone.
+- **Notification settings**: each person picks which events show up in
+  their bell and which ones @mention them on Discord (e.g. keep reminders,
+  skip every RSVP change). Everything is on until you switch it off.
 - **Account settings**: change your password (email/password accounts only).
 - **Dark mode**: light/dark/system, toggle in the nav.
 - **Admin panel**: the first person to ever sign in becomes admin

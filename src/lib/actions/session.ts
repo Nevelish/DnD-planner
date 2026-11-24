@@ -201,7 +201,7 @@ export async function cancelProposal(
   proposalId: string,
   reason?: string,
 ) {
-  await requireDM(campaignId);
+  const dm = await requireDM(campaignId);
 
   const cancelled = await prisma.sessionProposal.update({
     where: { id: proposalId, campaignId },
@@ -213,6 +213,7 @@ export async function cancelProposal(
     title: "Session cancelled",
     body: `${await formatSessionDateTime(cancelled.startsAt)}${reason ? ` — ${reason}` : ""}`,
     link: `/campaigns/${campaignId}/sessions/${proposalId}`,
+    excludeUserId: dm.userId,
   });
 
   revalidatePath(`/campaigns/${campaignId}/sessions/${proposalId}`);

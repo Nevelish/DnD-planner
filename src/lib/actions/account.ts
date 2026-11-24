@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/permissions";
 import { dateTimeFormatSchema, discordUserIdSchema } from "@/lib/validations/account";
+import { MENTION_EVENT_TYPES, NOTIFICATION_PREF_TYPES } from "@/lib/notificationPrefs";
 
 export async function updateDateTimeFormat(formData: FormData) {
   const userId = await requireUserId();
@@ -32,5 +33,24 @@ export async function updateDiscordUserId(formData: FormData) {
   }
 
   await prisma.user.update({ where: { id: userId }, data: parsed.data });
+  revalidatePath("/account");
+}
+
+/** Saves which notifications this person wants. The form sends the types
+ * that are switched ON; everything else on the list is stored as muted, so
+ * unknown values are simply ignored rather than trusted. */
+export async function updateNotificationPrefs(formData: FormData) {
+  const userId = await requireUserId();
+
+  const inApp = new Set(formData.getAll("inApp").map(String));
+  const mention = new Set(formData.getAll("mention").map(String));
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      mutedNotificationTypes: NOTIFICATION_PREF_TYPES.filter((t) => !inApp.has(t)),
+      mutedMentionTypes: MENTION_EVENT_TYPES.filter((t) => !mention.has(t)),
+    },
+  });
   revalidatePath("/account");
 }
