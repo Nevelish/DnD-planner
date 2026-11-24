@@ -47,8 +47,11 @@ import, and in-app notifications.
   threads), with pinning, search, and templates (NPC, location, session
   prep). Each session also gets its own DM-only prep, started from the
   "Lazy DM" outline, so old prep stays next to that session's recap.
-  Players never see any of it. Party notes stay a shared page anyone can
-  edit, and each player keeps a private note.
+  Link pages wiki-style with `[[Page title]]` (or `[[Page title|other
+  text]]`): typing `[[` suggests pages, links to pages that don't exist yet
+  create them when clicked, each page lists what links to it, and renaming
+  a page updates the links. Players never see any of it. Party notes stay
+  a shared page anyone can edit, and each player keeps a private note.
 - **Notifications**: in-app bell + full history for invites, proposals,
   reschedules, confirmations, cancellations, and RSVP changes.
 - **Reminders**: an in-app (and optional Discord) reminder 24 hours before

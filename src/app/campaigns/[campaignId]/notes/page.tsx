@@ -15,6 +15,7 @@ import {
   type NotebookSearch,
   type NotebookSelected,
 } from "@/components/notes/dm-notebook";
+import { normalizeTitle, wikiLinkTargets } from "@/lib/wikiLinks";
 
 type PageRow = {
   id: string;
@@ -48,6 +49,7 @@ async function loadNotebook(
   prefs: DateTimePrefs,
   requestedId: string | undefined,
   rawQuery: string | undefined,
+  startInEdit: boolean,
 ) {
   const select = {
     id: true,
@@ -69,6 +71,12 @@ async function loadNotebook(
     return Number(b.pinned) - Number(a.pinned);
   });
   const pages = rows.map((r) => toNotebookPage(campaignId, r, prefs));
+  // Session prep pages are all called "Session prep", so they can link out
+  // but aren't link targets themselves. Newest first, for duplicates.
+  const linkablePages = rows
+    .filter((r) => !r.sessionProposal)
+    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+    .map((r) => ({ id: r.id, title: r.title }));
 
   const q = rawQuery?.trim().slice(0, 100);
   let search: NotebookSearch | null = null;
@@ -103,16 +111,27 @@ async function loadNotebook(
       select: { ...select, content: true },
     });
     if (page) {
+      const key = normalizeTitle(page.title);
+      const linking = page.sessionProposal
+        ? []
+        : await prisma.dmPage.findMany({
+            where: { campaignId, id: { not: page.id }, content: { contains: "[[" } },
+            select: { ...select, content: true },
+          });
       selected = {
         ...toNotebookPage(campaignId, page, prefs),
         title: page.title,
         content: page.content,
         updatedAt: page.updatedAt.toISOString(),
+        startInEdit,
+        backlinks: linking
+          .filter((p) => wikiLinkTargets(p.content).has(key))
+          .map((p) => ({ id: p.id, label: toNotebookPage(campaignId, p, prefs).label })),
       };
     }
   }
 
-  return { pages, selected, search };
+  return { pages, selected, search, linkablePages };
 }
 
 export default async function NotesPage({
@@ -120,10 +139,10 @@ export default async function NotesPage({
   searchParams,
 }: {
   params: Promise<{ campaignId: string }>;
-  searchParams: Promise<{ page?: string; q?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; edit?: string }>;
 }) {
   const { campaignId } = await params;
-  const { page: requestedPage, q } = await searchParams;
+  const { page: requestedPage, q, edit } = await searchParams;
   const { userId, membership } = await requireMembershipForPage(campaignId);
   const isDM = membership.role === "DM";
 
@@ -138,7 +157,7 @@ export default async function NotesPage({
         }),
     // The DM's notebook is only ever loaded for the DM.
     isDM
-      ? getDateTimePrefs(userId).then((prefs) => loadNotebook(campaignId, prefs, requestedPage, q))
+      ? getDateTimePrefs(userId).then((prefs) => loadNotebook(campaignId, prefs, requestedPage, q, edit === "1"))
       : Promise.resolve(null),
   ]);
 
@@ -159,6 +178,7 @@ export default async function NotesPage({
               pages={notebook.pages}
               selected={notebook.selected}
               search={notebook.search}
+              linkablePages={notebook.linkablePages}
             />
           </CardContent>
         </Card>

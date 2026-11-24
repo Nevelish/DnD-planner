@@ -28,6 +28,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { NotesEditor } from "@/components/notes/notes-editor";
+import { NotebookMarkdown, type LinkablePage } from "@/components/notes/notebook-markdown";
 
 export type NotebookPage = {
   id: string;
@@ -43,6 +44,10 @@ export type NotebookSelected = NotebookPage & {
   title: string;
   content: string;
   updatedAt: string;
+  /** Pages with a [[link]] to this one. */
+  backlinks: { id: string; label: string }[];
+  /** Just created: open on the editor rather than the preview. */
+  startInEdit: boolean;
 };
 
 export type NotebookSearch = {
@@ -168,11 +173,14 @@ export function DmNotebook({
   pages,
   selected,
   search,
+  linkablePages,
 }: {
   campaignId: string;
   pages: NotebookPage[];
   selected: NotebookSelected | null;
   search: NotebookSearch | null;
+  /** Pages a [[link]] can point at (not session prep). */
+  linkablePages: LinkablePage[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -217,7 +225,7 @@ export function DmNotebook({
   return (
     <div className="grid gap-6 md:grid-cols-[15rem_minmax(0,1fr)]">
       <aside className="flex flex-col gap-4">
-        <NewPageDialog campaignId={campaignId} onCreated={(id) => go(hrefFor(id))} />
+        <NewPageDialog campaignId={campaignId} onCreated={(id) => go(`${hrefFor(id)}&edit=1`)} />
         <form onSubmit={handleSearch} role="search" className="relative">
           <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -312,7 +320,18 @@ export function DmNotebook({
                   onBlur={(e) => {
                     const title = e.currentTarget.value.trim();
                     if (title && title !== selected.title) {
-                      run(() => renameDmPage(campaignId, selected.id, title), () => toast.success("Renamed."));
+                      startTransition(async () => {
+                        try {
+                          const { updatedLinks } = await renameDmPage(campaignId, selected.id, title);
+                          toast.success(
+                            updatedLinks
+                              ? `Renamed, and updated links in ${updatedLinks} ${updatedLinks === 1 ? "page" : "pages"}.`
+                              : "Renamed.",
+                          );
+                        } catch (err) {
+                          toast.error(err instanceof Error ? err.message : "Something went wrong.");
+                        }
+                      });
                     } else {
                       e.currentTarget.value = selected.title;
                     }
@@ -355,7 +374,35 @@ export function DmNotebook({
               initialUpdatedAt={selected.updatedAt}
               save={(formData) => saveDmPage(campaignId, selected.id, formData)}
               onDirtyChange={onDirtyChange}
+              // Open on the readable view (where [[links]] work), unless the
+              // page is empty or was just created.
+              defaultTab={selected.startInEdit || !selected.content.trim() ? "edit" : "preview"}
+              linkTargets={linkablePages.filter((p) => p.id !== selected.id).map((p) => p.title)}
+              renderPreview={(content) => (
+                <NotebookMarkdown
+                  campaignId={campaignId}
+                  content={content}
+                  pages={linkablePages}
+                  confirmLeave={confirmLeave}
+                />
+              )}
+              placeholder={"Markdown works. Link other pages with [[Page title]]."}
             />
+            {selected.backlinks.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Linked from:</span>
+                {selected.backlinks.map((b) => (
+                  <Link
+                    key={b.id}
+                    href={hrefFor(b.id)}
+                    onClick={onNavigate}
+                    className="rounded-md border px-2 py-0.5 hover:bg-muted"
+                  >
+                    {b.label}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex min-h-48 flex-col items-center justify-center gap-2 rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
