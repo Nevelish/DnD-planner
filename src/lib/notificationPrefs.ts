@@ -22,7 +22,7 @@ export const NOTIFICATION_PREF_GROUPS: { heading: string; items: PrefItem[] }[] 
     heading: "Sessions & party",
     items: [
       { type: "SESSION_PROPOSED", label: "New session proposed" },
-      { type: "DATE_POLL_OPENED", label: "Date poll opened" },
+      { type: "DATE_POLL_OPENED", label: "Date poll opened or new date added" },
       { type: "SESSION_RESCHEDULED", label: "Time or location changed" },
       { type: "SESSION_CONFIRMED", label: "Session confirmed" },
       { type: "SESSION_CANCELLED", label: "Session cancelled" },

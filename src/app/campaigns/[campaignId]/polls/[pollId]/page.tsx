@@ -18,6 +18,9 @@ import { Button } from "@/components/ui/button";
 import { PollVoteButtons } from "@/components/polls/poll-vote-buttons";
 import { DecidePollButton } from "@/components/polls/decide-poll-button";
 import { CancelPollButton } from "@/components/polls/cancel-poll-button";
+import { AddPollDateForm } from "@/components/polls/add-poll-date-form";
+import { RemovePollDateButton } from "@/components/polls/remove-poll-date-button";
+import { MAX_POLL_OPTIONS } from "@/lib/validations/poll";
 
 const statusBadge = {
   OPEN: { label: "Voting open", variant: "secondary" },
@@ -45,7 +48,10 @@ export default async function DatePollPage({
     prisma.datePoll.findFirst({
       where: { id: pollId, campaignId },
       include: {
-        options: { orderBy: { startsAt: "asc" }, include: { votes: true } },
+        options: {
+          orderBy: { startsAt: "asc" },
+          include: { votes: true, addedBy: { select: { id: true, name: true, email: true } } },
+        },
         sessionProposal: { select: { id: true, startsAt: true } },
       },
     }),
@@ -130,7 +136,23 @@ export default async function DatePollPage({
                     </span>
                     {option.id === bestId && <Badge variant="success">Best so far</Badge>}
                     {picked && <Badge variant="success">Picked</Badge>}
+                    {isOpen && options.length > 2 && (isDM || option.addedById === userId) && (
+                      <RemovePollDateButton
+                        campaignId={campaignId}
+                        pollId={poll.id}
+                        optionId={option.id}
+                        dateLabel={option.label}
+                      />
+                    )}
                   </div>
+                  {option.addedBy && option.addedBy.id !== poll.createdById && (
+                    <p className="text-xs text-muted-foreground">
+                      Suggested by{" "}
+                      {option.addedBy.id === userId
+                        ? "you"
+                        : (option.addedBy.name ?? option.addedBy.email)}
+                    </p>
+                  )}
                   <dl className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                     {ANSWER_GROUPS.filter((g) => option.tally[g.key].length > 0).map((g) => (
                       <div key={g.key} className="flex gap-1">
@@ -165,6 +187,10 @@ export default async function DatePollPage({
             );
           })}
         </ul>
+
+        {isOpen && options.length < MAX_POLL_OPTIONS && (
+          <AddPollDateForm campaignId={campaignId} pollId={poll.id} isDM={isDM} />
+        )}
 
         {isOpen && isDM && (
           <div className="flex justify-end">
