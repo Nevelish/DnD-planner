@@ -14,6 +14,7 @@ const DEFAULT_DISCORD_EMBED_COLORS: Record<NotificationType, number> = {
   SESSION_RESCHEDULED: 0xe0a33a,
   SESSION_CONFIRMED: 0x57a64a,
   SESSION_CANCELLED: 0xd9534f,
+  SESSION_REMINDER: 0x6c8ebf,
   RSVP_CHANGED: 0xb87e40,
   RECURRING_DRAFT_READY: 0x8e6fbd,
 };
@@ -26,6 +27,7 @@ const MENTION_EVENT_TYPES: NotificationType[] = [
   "SESSION_PROPOSED",
   "SESSION_RESCHEDULED",
   "SESSION_CANCELLED",
+  "SESSION_REMINDER",
 ];
 
 /** Mirrors whatever just got written to the in-app Notification to the
@@ -38,7 +40,15 @@ const MENTION_EVENT_TYPES: NotificationType[] = [
  * action that triggered it. */
 async function notifyDiscord(
   campaignId: string | null | undefined,
-  input: { type: NotificationType; title: string; body?: string; link?: string; color?: number },
+  input: {
+    type: NotificationType;
+    title: string;
+    body?: string;
+    link?: string;
+    color?: number;
+    /** Limit @mentions to these users instead of everyone in the campaign. */
+    mentionUserIds?: string[];
+  },
 ) {
   if (!campaignId) return;
 
@@ -52,7 +62,11 @@ async function notifyDiscord(
   let content: string | undefined;
   if (MENTION_EVENT_TYPES.includes(input.type)) {
     const members = await prisma.campaignMember.findMany({
-      where: { campaignId, user: { discordUserId: { not: null } } },
+      where: {
+        campaignId,
+        user: { discordUserId: { not: null } },
+        ...(input.mentionUserIds ? { userId: { in: input.mentionUserIds } } : {}),
+      },
       select: { user: { select: { discordUserId: true } } },
     });
     if (members.length > 0) {
@@ -88,7 +102,8 @@ export async function createNotification(input: {
 
 /**
  * Notify every member of a campaign (optionally excluding one user, e.g. the
- * actor who triggered the event).
+ * actor who triggered the event), or only the given users — in which case
+ * the Discord post @mentions only them too.
  */
 export async function notifyCampaignMembers(
   campaignId: string,
@@ -98,13 +113,17 @@ export async function notifyCampaignMembers(
     body?: string;
     link?: string;
     excludeUserId?: string;
+    onlyUserIds?: string[];
     color?: number;
   },
 ) {
   const members = await prisma.campaignMember.findMany({
     where: {
       campaignId,
-      ...(input.excludeUserId ? { userId: { not: input.excludeUserId } } : {}),
+      userId: {
+        ...(input.excludeUserId ? { not: input.excludeUserId } : {}),
+        ...(input.onlyUserIds ? { in: input.onlyUserIds } : {}),
+      },
     },
     select: { userId: true },
   });
@@ -125,5 +144,5 @@ export async function notifyCampaignMembers(
   // Independent of in-app recipients: the Discord post is a channel
   // broadcast, not a per-member notification, so it still fires even if
   // everyone who'd otherwise get an in-app notification was excluded.
-  await notifyDiscord(campaignId, input);
+  await notifyDiscord(campaignId, { ...input, mentionUserIds: input.onlyUserIds });
 }

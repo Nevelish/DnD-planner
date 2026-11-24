@@ -12,7 +12,13 @@ import type { TimeFormat, DateFormat } from "@prisma/client";
  * (the browser making this request). For anything rendered to one specific
  * signed-in viewer, use the *ForUser variants below instead. */
 export async function formatSessionDateTime(date: Date): Promise<string> {
-  return formatInTimeZone(date, await getRequestTimeZone(), "EEEE d MMMM 'at' HH:mm");
+  return formatSessionDateTimeInTimeZone(date, await getRequestTimeZone());
+}
+
+/** Same broadcast format, for text generated outside any request (where
+ * there's no browser timezone to read), e.g. scheduled reminders. */
+export function formatSessionDateTimeInTimeZone(date: Date, timeZone: string): string {
+  return formatInTimeZone(date, timeZone, "EEEE d MMMM 'at' HH:mm");
 }
 
 export type DateTimePrefs = {

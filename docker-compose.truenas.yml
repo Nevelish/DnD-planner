@@ -29,6 +29,7 @@ services:
       DATABASE_URL: postgresql://dnd:REPLACE_ME@postgres:5432/dnd_planner
       NEXTAUTH_SECRET: REPLACE_ME
       NEXTAUTH_URL: https://REPLACE_ME.yourdomain.tld
+      TZ: Europe/Oslo # your group's timezone, used for reminder times
       # DISCORD_CLIENT_ID: REPLACE_ME
       # DISCORD_CLIENT_SECRET: REPLACE_ME
     depends_on:

@@ -7,6 +7,7 @@ import { requireDM } from "@/lib/permissions";
 import { proposalSchema } from "@/lib/validations/session";
 import { notifyCampaignMembers } from "@/lib/notifications";
 import { formatSessionDateTime } from "@/lib/sessionDateFormat";
+import { reminderSentAtFor } from "@/lib/sessionReminders";
 
 function parseProposalForm(formData: FormData) {
   const parsed = proposalSchema.safeParse({
@@ -37,6 +38,7 @@ export async function createProposal(campaignId: string, formData: FormData) {
         startsAt: data.startsAt,
         durationMinutes: data.durationMinutes,
         status: "PROPOSED",
+        reminderSentAt: reminderSentAtFor(data.startsAt),
       },
     });
     if (players.length > 0) {
@@ -85,6 +87,7 @@ export async function publishDraft(
         startsAt: data.startsAt,
         durationMinutes: data.durationMinutes,
         status: "PROPOSED",
+        reminderSentAt: reminderSentAtFor(data.startsAt),
       },
     });
     if (players.length > 0) {
@@ -124,14 +127,16 @@ export async function updateProposal(
   const before = await prisma.sessionProposal.findUniqueOrThrow({
     where: { id: proposalId, campaignId },
   });
+  const moved = before.startsAt.getTime() !== data.startsAt.getTime();
   const updated = await prisma.sessionProposal.update({
     where: { id: proposalId, campaignId },
-    data,
+    // A new start time re-arms the reminder for the new date.
+    data: moved ? { ...data, reminderSentAt: reminderSentAtFor(data.startsAt) } : data,
   });
 
   // Drafts haven't been sent to players yet, and a title- or end-time-only
   // edit doesn't move anyone's evening — only a new start time is news.
-  if (before.status !== "DRAFT" && before.startsAt.getTime() !== updated.startsAt.getTime()) {
+  if (before.status !== "DRAFT" && moved) {
     await notifyCampaignMembers(campaignId, {
       type: "SESSION_RESCHEDULED",
       title: "Session time changed",

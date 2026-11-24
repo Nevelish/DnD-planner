@@ -48,6 +48,9 @@ export async function GET(
       endsAt,
       status: p.status === "PROPOSED" ? "TENTATIVE" : "CONFIRMED",
       url: `${origin}/campaigns/${p.campaignId}/sessions/${p.id}`,
+      // A phone/desktop nudge an hour out, on top of the in-app and
+      // Discord reminder the day before. Pointless once a session is over.
+      alarmMinutesBefore: p.status === "COMPLETED" ? undefined : 60,
     };
   });
 

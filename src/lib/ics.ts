@@ -34,6 +34,8 @@ export type ICSEvent = {
   endsAt: Date;
   status: "TENTATIVE" | "CONFIRMED";
   url?: string;
+  /** Adds a calendar-app alert this many minutes before the start. */
+  alarmMinutesBefore?: number;
 };
 
 export function buildICSFeed(calendarName: string, events: ICSEvent[]) {
@@ -57,6 +59,15 @@ export function buildICSFeed(calendarName: string, events: ICSEvent[]) {
       `SUMMARY:${escapeText(event.summary)}`,
       `STATUS:${event.status}`,
       ...(event.url ? [`URL:${event.url}`] : []),
+      ...(event.alarmMinutesBefore
+        ? [
+            "BEGIN:VALARM",
+            "ACTION:DISPLAY",
+            `DESCRIPTION:${escapeText(event.summary)}`,
+            `TRIGGER:-PT${event.alarmMinutesBefore}M`,
+            "END:VALARM",
+          ]
+        : []),
       "END:VEVENT",
     ]),
     "END:VCALENDAR",

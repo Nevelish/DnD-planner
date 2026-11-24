@@ -26,7 +26,11 @@ import, and in-app notifications.
   optional best-effort import from a public D&D Beyond sheet.
 - **DM notes & session prep**: private markdown notes, visible only to the DM.
 - **Notifications**: in-app bell + full history for invites, proposals,
-  cancellations, and RSVP changes.
+  reschedules, confirmations, cancellations, and RSVP changes.
+- **Reminders**: an in-app (and optional Discord) reminder 24 hours before
+  each session, to the DM and everyone who hasn't said No, plus a
+  calendar-app alert an hour before via the .ics feed. Set `TZ` (e.g.
+  `Europe/Oslo`) so reminder times read in your group's timezone.
 - **Account settings**: change your password (email/password accounts only).
 - **Dark mode**: light/dark/system, toggle in the nav.
 - **Admin panel**: the first person to ever sign in becomes admin
