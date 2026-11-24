@@ -14,7 +14,6 @@ import { flushSync } from "react-dom";
 import { toast } from "sonner";
 import { LinkIcon, XIcon } from "lucide-react";
 
-import { upsertCampaignNote, upsertPlayerNote } from "@/lib/actions/notes";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,15 +28,12 @@ import {
   wikiLinkTargets,
 } from "@/lib/wikiLinks";
 import { caretCoordinates } from "@/lib/caretCoordinates";
-import type { CampaignNoteType } from "@prisma/client";
 
 const MAX_SUGGESTIONS = 6;
 const MAX_MENTION_CHIPS = 3;
 const SUGGESTION_WIDTH = 256;
 
 export function NotesEditor({
-  campaignId,
-  type,
   initialContent,
   initialUpdatedAt,
   placeholder,
@@ -48,16 +44,14 @@ export function NotesEditor({
   linkTargets,
   renderPreview,
   defaultTab = "edit",
+  linkHelp = "dm",
 }: {
-  campaignId: string;
-  /** Omit for the current user's own private note (PlayerNote). */
-  type?: CampaignNoteType;
   initialContent: string;
   /** ISO timestamp of the loaded note, or undefined if it doesn't exist yet. */
   initialUpdatedAt?: string;
   placeholder?: string;
-  /** Overrides where the note is saved (e.g. a session recap). */
-  save?: (formData: FormData) => Promise<{ updatedAt: string }>;
+  /** Where the text is saved: a notebook page, session prep or a recap. */
+  save: (formData: FormData) => Promise<{ updatedAt: string }>;
   onSaved?: (saved: { content: string; updatedAt: string }) => void;
   /** Shows a Cancel button next to Save. */
   onCancel?: () => void;
@@ -69,6 +63,8 @@ export function NotesEditor({
   /** Replaces the plain markdown preview (e.g. to resolve [[links]]). */
   renderPreview?: (content: string) => ReactNode;
   defaultTab?: "edit" | "preview";
+  /** Which notebook the "?" help describes. */
+  linkHelp?: "dm" | "player" | "party";
 }) {
   const [content, setContent] = useState(initialContent);
   const [lastSavedContent, setLastSavedContent] = useState(initialContent);
@@ -208,11 +204,7 @@ export function NotesEditor({
         if (expectedUpdatedAt) {
           formData.set("expectedUpdatedAt", expectedUpdatedAt);
         }
-        const result = save
-          ? await save(formData)
-          : type
-            ? await upsertCampaignNote(campaignId, type, formData)
-            : await upsertPlayerNote(campaignId, formData);
+        const result = await save(formData);
         setExpectedUpdatedAt(result.updatedAt);
         setLastSavedContent(content);
         toast.success("Saved.");
@@ -231,7 +223,7 @@ export function NotesEditor({
             <TabsTrigger value="edit">Edit</TabsTrigger>
             <TabsTrigger value="preview">Preview</TabsTrigger>
           </TabsList>
-          {linkTargets && <LinkingHelp />}
+          {linkTargets && <LinkingHelp kind={linkHelp} />}
         </div>
         <div className="flex gap-2">
           {onCancel && (

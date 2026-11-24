@@ -15,14 +15,15 @@ import {
 } from "lucide-react";
 
 import {
-  createDmPage,
-  deleteDmPage,
-  renameDmPage,
-  saveDmPage,
-  setDmPagePinned,
+  createNotebookPage,
+  deleteNotebookPage,
+  renameNotebookPage,
+  saveNotebookPage,
+  setNotebookPagePinned,
   linkMentionInPage,
-} from "@/lib/actions/dmPages";
-import { NOTE_TEMPLATES, type NoteTemplateKey } from "@/lib/noteTemplates";
+  type NotebookName,
+} from "@/lib/actions/notebook";
+import { NOTE_TEMPLATES, templatesFor, type NoteTemplateKey } from "@/lib/noteTemplates";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,7 +60,12 @@ export type NotebookSelected = NotebookPage & {
   mentions: { id: string; label: string }[];
   /** Just created: open on the editor rather than the preview. */
   startInEdit: boolean;
+  /** False for shared party pages someone else made (unless you're the DM). */
+  canDelete: boolean;
 };
+
+/** Which notebook a Notebook shows, for wording and templates. */
+export type NotebookKindName = "dm" | "player" | "party";
 
 export type NotebookSearch = {
   q: string;
@@ -70,9 +76,13 @@ const DISCARD = "You have unsaved changes on this page. Leave without saving?";
 
 function NewPageDialog({
   campaignId,
+  notebook,
+  kind,
   onCreated,
 }: {
   campaignId: string;
+  notebook: NotebookName;
+  kind: NotebookKindName;
   onCreated: (pageId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -85,7 +95,7 @@ function NewPageDialog({
     formData.set("template", template);
     startTransition(async () => {
       try {
-        const { pageId } = await createDmPage(campaignId, formData);
+        const { pageId } = await createNotebookPage(campaignId, notebook, formData);
         setOpen(false);
         onCreated(pageId);
       } catch (err) {
@@ -104,17 +114,30 @@ function NewPageDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>New page</DialogTitle>
-          <DialogDescription>Only you can see your notebook.</DialogDescription>
+          <DialogDescription>
+            {kind === "dm"
+              ? "Only you can see your notebook."
+              : kind === "player"
+                ? "Only you can see your notebook, not even the DM."
+                : "Everyone in the campaign can see and edit party pages."}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="page-title">Title</Label>
-            <Input id="page-title" name="title" required maxLength={120} placeholder="Baron Vex" autoFocus />
+            <Input
+              id="page-title"
+              name="title"
+              required
+              maxLength={120}
+              placeholder="Baron Vex"
+              autoFocus
+            />
           </div>
           <fieldset className="flex flex-col gap-1.5">
             <legend className="mb-1.5 text-sm font-medium">Start from</legend>
             <div className="grid grid-cols-2 gap-2">
-              {(Object.keys(NOTE_TEMPLATES) as NoteTemplateKey[]).map((key) => (
+              {templatesFor(kind).map((key) => (
                 <Button
                   key={key}
                   type="button"
@@ -122,7 +145,10 @@ function NewPageDialog({
                   size="sm"
                   aria-pressed={template === key}
                   onClick={() => setTemplate(key)}
-                  className={cn(template === key && "border-primary bg-primary/10 text-foreground hover:bg-primary/15")}
+                  className={cn(
+                    template === key &&
+                      "border-primary bg-primary/10 text-foreground hover:bg-primary/15",
+                  )}
                 >
                   {NOTE_TEMPLATES[key].label}
                 </Button>
@@ -156,7 +182,9 @@ function PageList({
   if (pages.length === 0) return null;
   return (
     <nav aria-label={heading} className="flex flex-col gap-1">
-      <h3 className="px-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">{heading}</h3>
+      <h3 className="px-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+        {heading}
+      </h3>
       <ul className="flex flex-col">
         {pages.map((p) => (
           <li key={p.id}>
@@ -170,7 +198,9 @@ function PageList({
               )}
             >
               <span className="truncate">{p.label}</span>
-              {p.meta && <span className="truncate text-xs font-normal text-muted-foreground">{p.meta}</span>}
+              {p.meta && (
+                <span className="truncate text-xs font-normal text-muted-foreground">{p.meta}</span>
+              )}
             </Link>
           </li>
         ))}
@@ -179,14 +209,22 @@ function PageList({
   );
 }
 
-export function DmNotebook({
+/** A notebook: the DM's (kind "dm", with session prep) or a player's own
+ * private one (kind "player"). Which pages it holds is decided on the
+ * server; this only changes templates and wording. */
+export function Notebook({
   campaignId,
+  notebook,
+  kind,
   pages,
   selected,
   search,
   linkablePages,
 }: {
   campaignId: string;
+  /** Which of the viewer's notebooks this is; the server decides the rest. */
+  notebook: NotebookName;
+  kind: NotebookKindName;
   pages: NotebookPage[];
   selected: NotebookSelected | null;
   search: NotebookSearch | null;
@@ -236,7 +274,12 @@ export function DmNotebook({
   return (
     <div className="grid gap-6 md:grid-cols-[15rem_minmax(0,1fr)]">
       <aside className="flex flex-col gap-4">
-        <NewPageDialog campaignId={campaignId} onCreated={(id) => go(`${hrefFor(id)}&edit=1`)} />
+        <NewPageDialog
+          campaignId={campaignId}
+          notebook={notebook}
+          kind={kind}
+          onCreated={(id) => go(`${hrefFor(id)}&edit=1`)}
+        />
         <form onSubmit={handleSearch} role="search" className="relative">
           <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -282,9 +325,27 @@ export function DmNotebook({
         </div>
 
         <div className="hidden flex-col gap-4 md:flex">
-          <PageList heading="Pinned" pages={pinned} selectedId={selectedId} hrefFor={hrefFor} onNavigate={onNavigate} />
-          <PageList heading="Pages" pages={plain} selectedId={selectedId} hrefFor={hrefFor} onNavigate={onNavigate} />
-          <PageList heading="Session prep" pages={prep} selectedId={selectedId} hrefFor={hrefFor} onNavigate={onNavigate} />
+          <PageList
+            heading="Pinned"
+            pages={pinned}
+            selectedId={selectedId}
+            hrefFor={hrefFor}
+            onNavigate={onNavigate}
+          />
+          <PageList
+            heading="Pages"
+            pages={plain}
+            selectedId={selectedId}
+            hrefFor={hrefFor}
+            onNavigate={onNavigate}
+          />
+          <PageList
+            heading="Session prep"
+            pages={prep}
+            selectedId={selectedId}
+            hrefFor={hrefFor}
+            onNavigate={onNavigate}
+          />
         </div>
       </aside>
 
@@ -293,7 +354,8 @@ export function DmNotebook({
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-2">
               <h3 className="font-medium">
-                {search.results.length} {search.results.length === 1 ? "page matches" : "pages match"} “{search.q}”
+                {search.results.length}{" "}
+                {search.results.length === 1 ? "page matches" : "pages match"} “{search.q}”
               </h3>
               <Button size="sm" variant="ghost" onClick={() => go(pathname)}>
                 <XIcon /> Clear search
@@ -302,9 +364,14 @@ export function DmNotebook({
             <ul className="flex flex-col divide-y rounded-md border">
               {search.results.map((r) => (
                 <li key={r.id}>
-                  <Link href={hrefFor(r.id)} className="flex flex-col gap-0.5 px-3 py-2 hover:bg-muted">
+                  <Link
+                    href={hrefFor(r.id)}
+                    className="flex flex-col gap-0.5 px-3 py-2 hover:bg-muted"
+                  >
                     <span className="text-sm font-medium">{r.label}</span>
-                    {r.snippet && <span className="text-xs text-muted-foreground">{r.snippet}</span>}
+                    {r.snippet && (
+                      <span className="text-xs text-muted-foreground">{r.snippet}</span>
+                    )}
                   </Link>
                 </li>
               ))}
@@ -316,7 +383,10 @@ export function DmNotebook({
               {selected.sessionHref ? (
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate text-lg font-semibold">Prep: {selected.label}</h3>
-                  <Link href={selected.sessionHref} className="text-xs text-muted-foreground underline underline-offset-2">
+                  <Link
+                    href={selected.sessionHref}
+                    className="text-xs text-muted-foreground underline underline-offset-2"
+                  >
                     Go to the session{selected.meta ? ` (${selected.meta})` : ""}
                   </Link>
                 </div>
@@ -333,7 +403,12 @@ export function DmNotebook({
                     if (title && title !== selected.title) {
                       startTransition(async () => {
                         try {
-                          const { updatedLinks } = await renameDmPage(campaignId, selected.id, title);
+                          const { updatedLinks } = await renameNotebookPage(
+                            campaignId,
+                            notebook,
+                            selected.id,
+                            title,
+                          );
                           toast.success(
                             updatedLinks
                               ? `Renamed, and updated links in ${updatedLinks} ${updatedLinks === 1 ? "page" : "pages"}.`
@@ -354,36 +429,43 @@ export function DmNotebook({
                   size="sm"
                   variant="ghost"
                   disabled={isPending}
-                  onClick={() => run(() => setDmPagePinned(campaignId, selected.id, !selected.pinned))}
+                  onClick={() =>
+                    run(() =>
+                      setNotebookPagePinned(campaignId, notebook, selected.id, !selected.pinned),
+                    )
+                  }
                 >
-                  {selected.pinned ? <PinOffIcon /> : <PinIcon />} {selected.pinned ? "Unpin" : "Pin"}
+                  {selected.pinned ? <PinOffIcon /> : <PinIcon />}{" "}
+                  {selected.pinned ? "Unpin" : "Pin"}
                 </Button>
               )}
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={isPending}
-                onClick={() => {
-                  if (!window.confirm(`Delete "${selected.label}"? This can't be undone.`)) return;
-                  run(
-                    () => deleteDmPage(campaignId, selected.id),
-                    () => {
-                      setDirty(false);
-                      toast.success("Page deleted.");
-                      router.push(pathname);
-                    },
-                  );
-                }}
-              >
-                <Trash2Icon /> Delete
-              </Button>
+              {selected.canDelete && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={isPending}
+                  onClick={() => {
+                    if (!window.confirm(`Delete "${selected.label}"? This can't be undone.`))
+                      return;
+                    run(
+                      () => deleteNotebookPage(campaignId, notebook, selected.id),
+                      () => {
+                        setDirty(false);
+                        toast.success("Page deleted.");
+                        router.push(pathname);
+                      },
+                    );
+                  }}
+                >
+                  <Trash2Icon /> Delete
+                </Button>
+              )}
             </div>
             <NotesEditor
               key={selected.id}
-              campaignId={campaignId}
               initialContent={selected.content}
               initialUpdatedAt={selected.updatedAt}
-              save={(formData) => saveDmPage(campaignId, selected.id, formData)}
+              save={(formData) => saveNotebookPage(campaignId, notebook, selected.id, formData)}
               onDirtyChange={onDirtyChange}
               // Open on the readable view (where [[links]] work), unless the
               // page is empty or was just created.
@@ -395,9 +477,12 @@ export function DmNotebook({
                   content={content}
                   pages={linkablePages}
                   confirmLeave={confirmLeave}
+                  notebook={notebook}
+                  basePath={pathname}
                 />
               )}
               placeholder={"Markdown works. Link other pages with [[Page title]]."}
+              linkHelp={kind}
             />
             {selected.backlinks.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -433,7 +518,7 @@ export function DmNotebook({
                       title={`Turn the mention in ${m.label} into a link`}
                       onClick={() =>
                         run(
-                          () => linkMentionInPage(campaignId, m.id, selected.title),
+                          () => linkMentionInPage(campaignId, notebook, m.id, selected.title),
                           () => toast.success(`Linked in ${m.label}.`),
                         )
                       }
@@ -449,7 +534,9 @@ export function DmNotebook({
         ) : (
           <div className="flex min-h-48 flex-col items-center justify-center gap-2 rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
             <p>Your notebook is empty.</p>
-            <p>Make a page for an NPC, a place, a plot thread: anything you want to keep track of.</p>
+            <p>
+              Make a page for an NPC, a place, a plot thread: anything you want to keep track of.
+            </p>
           </div>
         )}
       </section>

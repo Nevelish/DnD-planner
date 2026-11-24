@@ -15,7 +15,10 @@ export function TabNav({
   return (
     <nav className="mb-6 flex gap-1 overflow-x-auto border-b">
       {tabs.map((tab) => {
-        const active = pathname === tab.href;
+        // The first tab (Overview) is a prefix of every other tab, so it
+        // only counts as active on an exact match.
+        const active =
+          pathname === tab.href || (tab !== tabs[0] && pathname.startsWith(`${tab.href}/`));
         return (
           <Link
             key={tab.href}

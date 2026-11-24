@@ -106,8 +106,8 @@ async function main() {
     },
   });
 
-  if ((await prisma.dmPage.count({ where: { campaignId: campaign.id } })) === 0) {
-    await prisma.dmPage.create({
+  if ((await prisma.notebookPage.count({ where: { campaignId: campaign.id, kind: "DM" } })) === 0) {
+    await prisma.notebookPage.create({
       data: {
         campaignId: campaign.id,
         title: "Campaign notes",

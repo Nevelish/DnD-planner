@@ -37,7 +37,6 @@ export function RecapSection({
   if (editing) {
     return (
       <NotesEditor
-        campaignId={campaignId}
         initialContent={recap.content}
         initialUpdatedAt={recap.updatedAt}
         placeholder={"What happened? Where did the party go, who did they meet, what did they find — and how did it end?\n\nMarkdown works: **bold**, lists, headings…"}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { NotebookPenIcon, PencilIcon } from "lucide-react";
 
-import { ensureSessionPrep, saveDmPage } from "@/lib/actions/dmPages";
+import { ensureSessionPrep, saveNotebookPage } from "@/lib/actions/notebook";
 import { Button } from "@/components/ui/button";
 import { NotebookMarkdown, type LinkablePage } from "@/components/notes/notebook-markdown";
 import { NotesEditor } from "@/components/notes/notes-editor";
@@ -59,10 +59,9 @@ export function SessionPrepSection({
     return (
       <NotesEditor
         key={prep.id}
-        campaignId={campaignId}
         initialContent={prep.content}
         initialUpdatedAt={prep.updatedAt}
-        save={(formData) => saveDmPage(campaignId, prep.id, formData)}
+        save={(formData) => saveNotebookPage(campaignId, "mine", prep.id, formData)}
         onSaved={({ content, updatedAt }) => {
           setPrep({ ...prep, content, updatedAt });
           setEditing(false);

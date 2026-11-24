@@ -51,8 +51,7 @@ import, and in-app notifications.
   text]]`): typing `[[` suggests pages right at the cursor, naming a page
   in plain text offers to link it, links to pages that don't exist yet
   create them when clicked, each page lists what links to it (and what
-  mentions it without a link), and renaming a page updates the links. Players never see any of it. Party notes stay
-  a shared page anyone can edit, and each player keeps a private note.
+  mentions it without a link), and renaming a page updates the links. Players never see any of it.
 - **Notifications**: in-app bell + full history for invites, proposals,
   reschedules, confirmations, cancellations, and RSVP changes.
 - **Reminders**: an in-app (and optional Discord) reminder 24 hours before
@@ -62,6 +61,11 @@ import, and in-app notifications.
 - **Notification settings**: each person picks which events show up in
   their bell and which ones @mention them on Discord (e.g. keep reminders,
   skip every RSVP change). Everything is on until you switch it off.
+- **Player and party notebooks**: next to the DM's, every player gets a
+  private notebook in each campaign (hidden from other players and the
+  DM), and the party shares a notebook everyone can add to and edit. Both
+  have pages, search, links, suggestions and a "Session notes" template.
+  In the party notebook only a page's author or the DM can delete it.
 - **Profile pictures**: optional; upload one under Account and it shows next
   to your name in the nav, member lists and RSVPs. Discord sign-ins use
   the Discord picture until you upload your own; otherwise initials. Photos

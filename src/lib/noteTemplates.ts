@@ -14,10 +14,19 @@ export const NOTE_TEMPLATES = {
     // The eight steps from "Return of the Lazy Dungeon Master".
     content: `## Review the characters\n\n## Strong start\n\n## Potential scenes\n- \n\n## Secrets & clues\n- \n\n## Fantastic locations\n\n## Important NPCs\n\n## Relevant monsters\n\n## Rewards\n`,
   },
+  sessionNotes: {
+    label: "Session notes",
+    // A player's notes from the table, for their own notebook.
+    content: `## What happened\n\n## People we met\n- \n\n## Loot & rewards\n- \n\n## Quests & leads\n- \n\n## Questions for next time\n- \n`,
+  },
 } as const;
 
 export type NoteTemplateKey = keyof typeof NOTE_TEMPLATES;
 
-export function isNoteTemplateKey(value: unknown): value is NoteTemplateKey {
-  return typeof value === "string" && Object.hasOwn(NOTE_TEMPLATES, value);
+/** Which templates each notebook offers: the DM plans sessions, players
+ * write down what happened in them. */
+export function templatesFor(kind: "dm" | "player" | "party") {
+  return kind === "dm"
+    ? (["blank", "npc", "location", "sessionPrep"] as const)
+    : (["blank", "npc", "location", "sessionNotes"] as const);
 }
