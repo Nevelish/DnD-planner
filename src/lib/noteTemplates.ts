@@ -25,7 +25,7 @@ export type NoteTemplateKey = keyof typeof NOTE_TEMPLATES;
 
 /** Which templates each notebook offers: the DM plans sessions, players
  * write down what happened in them. */
-export function templatesFor(kind: "dm" | "player") {
+export function templatesFor(kind: "dm" | "player" | "party") {
   return kind === "dm"
     ? (["blank", "npc", "location", "sessionPrep"] as const)
     : (["blank", "npc", "location", "sessionNotes"] as const);

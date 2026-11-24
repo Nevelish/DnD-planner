@@ -50,18 +50,19 @@ model User {
   accounts Account[]
   sessions Session[]
 
-  memberships      CampaignMember[]
-  proposedSessions SessionProposal[] @relation("ProposedBy")
-  notifications    Notification[]
-  campaignNotes    CampaignNote[]
-  playerNotes      PlayerNote[]
-  ownedCampaigns   Campaign[]        @relation("CampaignOwner")
-  createdPolls     DatePoll[]        @relation("PollCreatedBy")
-  addedPollDates   DatePollOption[]  @relation("PollOptionAddedBy")
-  recapsEdited     SessionProposal[] @relation("RecapAuthor")
-  avatar           UserAvatar?
-  notebookPages    NotebookPage[]    @relation("NotebookPages")
-  safetyEntries    SafetyEntry[]
+  memberships       CampaignMember[]
+  proposedSessions  SessionProposal[] @relation("ProposedBy")
+  notifications     Notification[]
+  campaignNotes     CampaignNote[]
+  playerNotes       PlayerNote[]
+  ownedCampaigns    Campaign[]        @relation("CampaignOwner")
+  createdPolls      DatePoll[]        @relation("PollCreatedBy")
+  addedPollDates    DatePollOption[]  @relation("PollOptionAddedBy")
+  recapsEdited      SessionProposal[] @relation("RecapAuthor")
+  avatar            UserAvatar?
+  notebookPages     NotebookPage[]    @relation("NotebookPages")
+  notebookPagesMade NotebookPage[]    @relation("NotebookPagesCreated")
+  safetyEntries     SafetyEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -442,30 +443,36 @@ model UserAvatar {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-/// A notebook page. ownerId decides whose notebook it's in, and nobody
-/// else's queries can reach it:
-///   - null: the campaign DM's notebook (NPCs, places… and, when
-///     sessionProposalId is set, that session's prep);
-///   - a user id: that player's private notebook in this campaign, which
-///     not even the DM can see.
-/// Kept in its own table (still called "DmPage", from when only the DM
-/// had one) so it's never loaded along with data other people receive.
+enum NotebookKind {
+  DM // the campaign DM's notebook (incl. session prep)
+  PERSONAL // one player's private notebook (ownerId), hidden even from the DM
+  PARTY // shared by everyone in the campaign
+}
+
+/// A notebook page. `kind` (and `ownerId` for personal notebooks) decides
+/// which notebook it's in; every query filters on both, so pages from
+/// another notebook can't be reached. Kept in its own table (still called
+/// "DmPage", from when only the DM had one) so it's never loaded along with
+/// data other people receive.
 model NotebookPage {
-  id                String   @id @default(cuid())
+  id                String       @id @default(cuid())
   campaignId        String
-  ownerId           String?
+  kind              NotebookKind @default(DM)
+  ownerId           String? // PERSONAL only: whose notebook
+  createdById       String? // who made the page; in the party notebook only they (or the DM) may delete it
   title             String
-  content           String   @default("") @db.Text
-  pinned            Boolean  @default(false)
-  sessionProposalId String?  @unique // DM notebook only
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt // also the optimistic-concurrency version for edits
+  content           String       @default("") @db.Text
+  pinned            Boolean      @default(false)
+  sessionProposalId String?      @unique // DM notebook only: that session's prep
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt // also the optimistic-concurrency version for edits
 
   campaign        Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   owner           User?            @relation("NotebookPages", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdBy       User?            @relation("NotebookPagesCreated", fields: [createdById], references: [id], onDelete: SetNull)
   sessionProposal SessionProposal? @relation(fields: [sessionProposalId], references: [id], onDelete: SetNull)
 
   @@index([campaignId, updatedAt])
-  @@index([campaignId, ownerId])
+  @@index([campaignId, kind, ownerId])
   @@map("DmPage")
 }

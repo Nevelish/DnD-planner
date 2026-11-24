@@ -59,10 +59,9 @@ export function SessionPrepSection({
     return (
       <NotesEditor
         key={prep.id}
-        campaignId={campaignId}
         initialContent={prep.content}
         initialUpdatedAt={prep.updatedAt}
-        save={(formData) => saveNotebookPage(campaignId, prep.id, formData)}
+        save={(formData) => saveNotebookPage(campaignId, "mine", prep.id, formData)}
         onSaved={({ content, updatedAt }) => {
           setPrep({ ...prep, content, updatedAt });
           setEditing(false);

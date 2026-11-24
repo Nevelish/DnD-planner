@@ -61,11 +61,11 @@ import, and in-app notifications.
 - **Notification settings**: each person picks which events show up in
   their bell and which ones @mention them on Discord (e.g. keep reminders,
   skip every RSVP change). Everything is on until you switch it off.
-- **Player notebooks**: every player gets the same kind of notebook for
-  their own notes in each campaign (pages, search, links, suggestions,
-  and a "Session notes" template). It's private: other players can't see
-  it, and neither can the DM. Party notes stay a single shared page
-  anyone can edit.
+- **Player and party notebooks**: next to the DM's, every player gets a
+  private notebook in each campaign (hidden from other players and the
+  DM), and the party shares a notebook everyone can add to and edit. Both
+  have pages, search, links, suggestions and a "Session notes" template.
+  In the party notebook only a page's author or the DM can delete it.
 - **Profile pictures**: optional; upload one under Account and it shows next
   to your name in the nav, member lists and RSVPs. Discord sign-ins use
   the Discord picture until you upload your own; otherwise initials. Photos

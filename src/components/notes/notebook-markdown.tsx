@@ -7,7 +7,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 
-import { createNotebookPage } from "@/lib/actions/notebook";
+import { createNotebookPage, type NotebookName } from "@/lib/actions/notebook";
 import { linkifyWikiLinks, normalizeTitle, wikiTargetFromHref } from "@/lib/wikiLinks";
 
 export type LinkablePage = { id: string; title: string };
@@ -22,19 +22,26 @@ export function NotebookMarkdown({
   content,
   pages,
   confirmLeave,
+  notebook = "mine",
+  basePath,
 }: {
   campaignId: string;
   content: string;
   pages: LinkablePage[];
   /** Returns false to stay put, e.g. when there are unsaved changes. */
   confirmLeave?: () => boolean;
+  /** Which notebook the pages (and any page created from a link) are in. */
+  notebook?: NotebookName;
+  /** That notebook's page, e.g. /campaigns/x/notes or …/notes/party. */
+  basePath?: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const byTitle = useMemo(() => {
     const map = new Map<string, string>();
     // pages arrive newest first; keep the first (newest) for duplicate titles
-    for (const p of pages) if (!map.has(normalizeTitle(p.title))) map.set(normalizeTitle(p.title), p.id);
+    for (const p of pages)
+      if (!map.has(normalizeTitle(p.title))) map.set(normalizeTitle(p.title), p.id);
     return map;
   }, [pages]);
   const markdown = useMemo(() => linkifyWikiLinks(content), [content]);
@@ -43,7 +50,7 @@ export function NotebookMarkdown({
     return <p className="text-sm text-muted-foreground">Nothing here yet.</p>;
   }
 
-  const pageHref = (id: string) => `/campaigns/${campaignId}/notes?page=${id}`;
+  const pageHref = (id: string) => `${basePath ?? `/campaigns/${campaignId}/notes`}?page=${id}`;
 
   function createAndOpen(title: string) {
     if (confirmLeave && !confirmLeave()) return;
@@ -51,7 +58,7 @@ export function NotebookMarkdown({
     formData.set("title", title);
     startTransition(async () => {
       try {
-        const { pageId } = await createNotebookPage(campaignId, formData);
+        const { pageId } = await createNotebookPage(campaignId, notebook, formData);
         toast.success(`Created "${title}".`);
         router.push(`${pageHref(pageId)}&edit=1`);
       } catch (e) {

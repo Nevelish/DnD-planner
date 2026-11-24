@@ -106,7 +106,7 @@ async function main() {
     },
   });
 
-  if ((await prisma.notebookPage.count({ where: { campaignId: campaign.id, ownerId: null } })) === 0) {
+  if ((await prisma.notebookPage.count({ where: { campaignId: campaign.id, kind: "DM" } })) === 0) {
     await prisma.notebookPage.create({
       data: {
         campaignId: campaign.id,

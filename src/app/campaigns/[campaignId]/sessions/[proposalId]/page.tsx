@@ -56,15 +56,15 @@ export default async function SessionDetailPage({
     // session data that players get.
     isDM
       ? prisma.notebookPage.findFirst({
-          where: { sessionProposalId: proposalId, campaignId, ownerId: null },
+          where: { sessionProposalId: proposalId, campaignId, kind: "DM", ownerId: null },
           select: { id: true, content: true, updatedAt: true },
         })
       : Promise.resolve(null),
     // Notebook titles, so [[links]] in the prep resolve. Also DM-only.
     isDM
       ? prisma.notebookPage.findMany({
-          // The DM notebook only: players' private pages are never link targets here.
-          where: { campaignId, ownerId: null, sessionProposalId: null },
+          // The DM notebook only: players' and party pages are never link targets here.
+          where: { campaignId, kind: "DM", ownerId: null, sessionProposalId: null },
           select: { id: true, title: true },
           orderBy: { updatedAt: "desc" },
         })
