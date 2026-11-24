@@ -5,6 +5,7 @@ import "./globals.css";
 import { NavBar } from "@/components/layout/nav-bar";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/layout/theme-provider";
+import { TimeZoneSync } from "@/components/layout/timezone-sync";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -69,6 +70,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <NavBar />
           <main className="flex flex-1 flex-col">{children}</main>
           <Toaster richColors position="top-right" />
+          <TimeZoneSync />
         </ThemeProvider>
       </body>
     </html>

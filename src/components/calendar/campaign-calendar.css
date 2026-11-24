@@ -9,6 +9,12 @@
   color: var(--primary-foreground);
 }
 
+.rbc-event-completed {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+}
+
 .rbc-today {
   background-color: var(--accent);
 }

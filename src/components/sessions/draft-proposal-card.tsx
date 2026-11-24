@@ -6,14 +6,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ProposeSessionDialog } from "@/components/sessions/propose-session-dialog";
-import { formatSessionDateTime } from "@/lib/sessionDateFormat";
+import { formatSessionDateTimeForUser, type DateTimePrefs } from "@/lib/sessionDateFormat";
 
 export function DraftProposalCard({
   campaignId,
   proposal,
+  prefs,
 }: {
   campaignId: string;
   proposal: { id: string; title: string | null; startsAt: Date; durationMinutes: number | null };
+  prefs: DateTimePrefs;
 }) {
   return (
     <Card className="border-dashed">
@@ -21,7 +23,7 @@ export function DraftProposalCard({
         <CardTitle>Draft session ready</CardTitle>
         <CardDescription>
           Your recurring schedule suggests{" "}
-          {formatSessionDateTime(proposal.startsAt)}. Review and send it to
+          {formatSessionDateTimeForUser(proposal.startsAt, prefs)}. Review and send it to
           the party.
         </CardDescription>
       </CardHeader>

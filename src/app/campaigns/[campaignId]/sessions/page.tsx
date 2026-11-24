@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { prisma } from "@/lib/prisma";
 import { requireMembershipForPage } from "@/lib/permissions";
+import { completePastSessions } from "@/lib/completeSessions";
 import {
   formatDateOnlyForUser,
   formatSessionDateTimeForUser,
@@ -27,6 +28,8 @@ export default async function SessionsPage({
   const { campaignId } = await params;
   const { userId, membership } = await requireMembershipForPage(campaignId);
   const isDM = membership.role === "DM";
+
+  await completePastSessions([campaignId]);
 
   const [proposals, prefs] = await Promise.all([
     prisma.sessionProposal.findMany({
