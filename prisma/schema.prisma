@@ -57,6 +57,7 @@ model User {
   playerNotes      PlayerNote[]
   ownedCampaigns   Campaign[]        @relation("CampaignOwner")
   createdPolls     DatePoll[]        @relation("PollCreatedBy")
+  addedPollDates   DatePollOption[]  @relation("PollOptionAddedBy")
   recapsEdited     SessionProposal[] @relation("RecapAuthor")
   avatar           UserAvatar?
   safetyEntries    SafetyEntry[]
@@ -252,12 +253,14 @@ model DatePoll {
 }
 
 model DatePollOption {
-  id       String   @id @default(cuid())
-  pollId   String
-  startsAt DateTime
+  id        String   @id @default(cuid())
+  pollId    String
+  startsAt  DateTime
+  addedById String? // set when someone added this date after the poll opened; null for the DM's original dates
 
-  poll  DatePoll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
-  votes DatePollVote[]
+  poll    DatePoll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  addedBy User?          @relation("PollOptionAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
+  votes   DatePollVote[]
 
   @@unique([pollId, startsAt])
 }

@@ -24,8 +24,10 @@ import, and in-app notifications.
   session (or taking it online) notifies the party. Both show up in the
   .ics feed, so they land in everyone's calendar app.
 - **Date polls**: not sure which day works? The DM offers a few dates,
-  players mark each Yes/Maybe/No, and the best one is highlighted. Picking
-  it proposes the session with everyone's RSVP pre-filled from their vote.
+  players mark each Yes/Maybe/No, and the best one is highlighted. If none
+  work, anyone can suggest another date (they're counted as a Yes, and
+  everyone who already voted is asked about it). Picking a date proposes
+  the session with everyone's RSVP pre-filled from their vote.
 - **Session recaps**: once a session has been played, anyone in the party
   can write up what happened (markdown). The latest one shows as "Previously
   on…" on the campaign overview, and the campaign log collects them all, so

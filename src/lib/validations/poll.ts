@@ -31,3 +31,9 @@ export const createPollSchema = z
 export const pollVoteSchema = z.object({
   choice: z.enum(["YES", "MAYBE", "NO"]),
 });
+
+export const addPollOptionSchema = z.object({
+  startsAt: z.coerce
+    .date({ message: "Pick a valid date and time." })
+    .refine((d) => d.getTime() > Date.now(), "Pick a date in the future."),
+});
