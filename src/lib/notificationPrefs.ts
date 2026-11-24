@@ -19,7 +19,7 @@ type PrefItem = { type: NotificationType; label: string };
  * the app sends it yet. */
 export const NOTIFICATION_PREF_GROUPS: { heading: string; items: PrefItem[] }[] = [
   {
-    heading: "Sessions",
+    heading: "Sessions & party",
     items: [
       { type: "SESSION_PROPOSED", label: "New session proposed" },
       { type: "DATE_POLL_OPENED", label: "Date poll opened" },
@@ -27,7 +27,9 @@ export const NOTIFICATION_PREF_GROUPS: { heading: string; items: PrefItem[] }[] 
       { type: "SESSION_CONFIRMED", label: "Session confirmed" },
       { type: "SESSION_CANCELLED", label: "Session cancelled" },
       { type: "SESSION_REMINDER", label: "Reminder the day before" },
+      { type: "RECAP_POSTED", label: "Session recap posted" },
       { type: "RSVP_CHANGED", label: "Someone's RSVP changes" },
+      { type: "SAFETY_TOOL_ADDED", label: "A line or veil is added" },
     ],
   },
   {

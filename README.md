@@ -26,6 +26,14 @@ import, and in-app notifications.
 - **Date polls**: not sure which day works? The DM offers a few dates,
   players mark each Yes/Maybe/No, and the best one is highlighted. Picking
   it proposes the session with everyone's RSVP pre-filled from their vote.
+- **Session recaps**: once a session has been played, anyone in the party
+  can write up what happened (markdown). The latest one shows as "Previously
+  on…" on the campaign overview, and the campaign log collects them all, so
+  whoever missed a night can catch up.
+- **Safety tools**: a Safety tab with lines & veils that anyone can add to,
+  anonymously (nobody, not even the DM, sees who added what), and the DM's
+  Session Zero answers: tone, character death, PvP, how to stop a scene,
+  and so on.
 - **Recurring sessions**: set a cadence (e.g. every other Saturday) and the
   app drafts the next date ahead of time for the DM to review and send.
 - **Calendar**: a month view of every proposed/confirmed session across your

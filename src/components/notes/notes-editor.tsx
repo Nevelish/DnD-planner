@@ -17,6 +17,9 @@ export function NotesEditor({
   initialContent,
   initialUpdatedAt,
   placeholder,
+  save,
+  onSaved,
+  onCancel,
 }: {
   campaignId: string;
   /** Omit for the current user's own private note (PlayerNote). */
@@ -25,6 +28,11 @@ export function NotesEditor({
   /** ISO timestamp of the loaded note, or undefined if it doesn't exist yet. */
   initialUpdatedAt?: string;
   placeholder?: string;
+  /** Overrides where the note is saved (e.g. a session recap). */
+  save?: (formData: FormData) => Promise<{ updatedAt: string }>;
+  onSaved?: (saved: { content: string; updatedAt: string }) => void;
+  /** Shows a Cancel button next to Save. */
+  onCancel?: () => void;
 }) {
   const [content, setContent] = useState(initialContent);
   const [lastSavedContent, setLastSavedContent] = useState(initialContent);
@@ -56,12 +64,15 @@ export function NotesEditor({
         if (expectedUpdatedAt) {
           formData.set("expectedUpdatedAt", expectedUpdatedAt);
         }
-        const result = type
-          ? await upsertCampaignNote(campaignId, type, formData)
-          : await upsertPlayerNote(campaignId, formData);
+        const result = save
+          ? await save(formData)
+          : type
+            ? await upsertCampaignNote(campaignId, type, formData)
+            : await upsertPlayerNote(campaignId, formData);
         setExpectedUpdatedAt(result.updatedAt);
         setLastSavedContent(content);
         toast.success("Saved.");
+        onSaved?.({ content, updatedAt: result.updatedAt });
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Something went wrong.");
       }
@@ -75,9 +86,23 @@ export function NotesEditor({
           <TabsTrigger value="edit">Edit</TabsTrigger>
           <TabsTrigger value="preview">Preview</TabsTrigger>
         </TabsList>
-        <Button size="sm" onClick={handleSave} disabled={isPending}>
-          {isPending ? "Saving…" : "Save"}
-        </Button>
+        <div className="flex gap-2">
+          {onCancel && (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={isPending}
+              onClick={() => {
+                if (!isDirty || window.confirm("Discard your changes?")) onCancel();
+              }}
+            >
+              Cancel
+            </Button>
+          )}
+          <Button size="sm" onClick={handleSave} disabled={isPending}>
+            {isPending ? "Saving…" : "Save"}
+          </Button>
+        </div>
       </div>
       <TabsContent value="edit">
         <MarkdownToolbar textareaRef={textareaRef} value={content} onChange={setContent} />

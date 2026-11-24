@@ -56,6 +56,8 @@ model User {
   playerNotes      PlayerNote[]
   ownedCampaigns   Campaign[]        @relation("CampaignOwner")
   createdPolls     DatePoll[]        @relation("PollCreatedBy")
+  recapsEdited     SessionProposal[] @relation("RecapAuthor")
+  safetyEntries    SafetyEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -118,7 +120,8 @@ model Campaign {
   ownerId              String
   inviteCode           String             @unique
   discordWebhookUrl    String? // posts campaign notifications (session proposed/cancelled, RSVP, etc.) to Discord
-  discordWebhookEvents NotificationType[] @default([SESSION_PROPOSED, SESSION_RESCHEDULED, SESSION_CONFIRMED, SESSION_CANCELLED, SESSION_REMINDER, DATE_POLL_OPENED, RSVP_CHANGED, MEMBER_JOINED, MEMBER_LEFT, RECURRING_DRAFT_READY]) // which event types actually post to discordWebhookUrl
+  sessionZero          Json? // the DM's Session Zero answers: { [questionKey]: answer }, see src/lib/sessionZero.ts
+  discordWebhookEvents NotificationType[] @default([SESSION_PROPOSED, SESSION_RESCHEDULED, SESSION_CONFIRMED, SESSION_CANCELLED, SESSION_REMINDER, DATE_POLL_OPENED, RECAP_POSTED, RSVP_CHANGED, MEMBER_JOINED, MEMBER_LEFT, RECURRING_DRAFT_READY]) // which event types actually post to discordWebhookUrl
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 
@@ -131,6 +134,7 @@ model Campaign {
   playerNotes      PlayerNote[]
   notifications    Notification[]
   datePolls        DatePoll[]
+  safetyEntries    SafetyEntry[]
 }
 
 model CampaignMember {
@@ -168,6 +172,9 @@ model SessionProposal {
   format          SessionFormat? // in person or online; null = not said
   location        String? // an address/place, or a link/platform for online games
   description     String?               @db.Text
+  recap           String?               @db.Text // "what happened", written by anyone in the campaign once it's COMPLETED
+  recapUpdatedAt  DateTime? // doubles as the optimistic-concurrency version for recap edits
+  recapAuthorId   String? // whoever last edited the recap
   status          SessionProposalStatus @default(PROPOSED)
   recurringRuleId String?
   cancelReason    String?               @db.Text
@@ -177,6 +184,7 @@ model SessionProposal {
 
   campaign      Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   proposedBy    User           @relation("ProposedBy", fields: [proposedById], references: [id])
+  recapAuthor   User?          @relation("RecapAuthor", fields: [recapAuthorId], references: [id], onDelete: SetNull)
   recurringRule RecurringRule? @relation(fields: [recurringRuleId], references: [id])
   rsvps         Rsvp[]
   datePoll      DatePoll?
@@ -373,6 +381,8 @@ enum NotificationType {
   SESSION_RESCHEDULED
   SESSION_CONFIRMED
   SESSION_REMINDER
+  RECAP_POSTED
+  SAFETY_TOOL_ADDED
   DATE_POLL_OPENED
 }
 
@@ -391,4 +401,25 @@ model Notification {
   campaign  Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
   @@index([recipientId, isRead])
+}
+
+enum SafetyKind {
+  LINE // never appears in the game
+  VEIL // can happen, but off-screen / fade to black
+}
+
+/// A line or veil. Anonymous by design: authorId is only used to let the
+/// author remove their own entry and is never shown to anyone else.
+model SafetyEntry {
+  id         String     @id @default(cuid())
+  campaignId String
+  authorId   String?
+  kind       SafetyKind
+  text       String
+  createdAt  DateTime   @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  author   User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId])
 }
