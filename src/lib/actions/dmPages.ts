@@ -6,7 +6,13 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireDM } from "@/lib/permissions";
 import { NOTE_TEMPLATES, isNoteTemplateKey } from "@/lib/noteTemplates";
-import { normalizeTitle, renameWikiLinks, wikiLinkTargets } from "@/lib/wikiLinks";
+import {
+  findUnlinkedMentions,
+  linkMention,
+  normalizeTitle,
+  renameWikiLinks,
+  wikiLinkTargets,
+} from "@/lib/wikiLinks";
 
 // Everything here is DM-only: every action starts with requireDM and every
 // query is scoped to that campaign.
@@ -192,4 +198,25 @@ export async function ensureSessionPrep(campaignId: string, proposalId: string) 
 
   revalidateNotebook(campaignId, proposalId);
   return { id: page.id, content: page.content, updatedAt: page.updatedAt.toISOString() };
+}
+
+/** "Mentioned in": turns the first plain mention of `title` in another
+ * page into a [[link]], keeping the wording as written. */
+export async function linkMentionInPage(campaignId: string, pageId: string, title: string) {
+  await requireDM(campaignId);
+  const page = await prisma.dmPage.findFirst({
+    where: { id: pageId, campaignId },
+    select: { content: true, updatedAt: true, sessionProposalId: true },
+  });
+  if (!page) throw new Error("Page not found.");
+
+  const mention = findUnlinkedMentions(page.content, [title])[0];
+  if (!mention) throw new Error("That page doesn't mention it any more.");
+
+  const { count } = await prisma.dmPage.updateMany({
+    where: { id: pageId, updatedAt: page.updatedAt },
+    data: { content: linkMention(page.content, mention) },
+  });
+  if (count === 0) throw new Error("That page just changed. Try again.");
+  revalidateNotebook(campaignId, page.sessionProposalId);
 }

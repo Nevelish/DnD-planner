@@ -77,7 +77,15 @@ export function LinkingHelp() {
             A <span className="underline decoration-dashed underline-offset-2">dashed link</span> means
             the page doesn&apos;t exist yet. Click it in Preview to create it.
           </li>
-          <li>Links are clickable in Preview. &ldquo;Linked from&rdquo; under a page shows what links to it.</li>
+          <li>
+            Write a page&apos;s name without brackets and a <em>Link &ldquo;…&rdquo;?</em> button
+            appears under the editor to link it for you.
+          </li>
+          <li>
+            Links are clickable in Preview. Under each page, &ldquo;Linked from&rdquo; shows what
+            links to it, and &ldquo;Mentioned in&rdquo; shows pages that name it without a link,
+            with a button to link them.
+          </li>
           <li>Renaming a page updates the links to it.</li>
           <li>Session prep can link to pages, but can&apos;t be linked to itself.</li>
         </ul>

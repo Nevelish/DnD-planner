@@ -15,7 +15,7 @@ import {
   type NotebookSearch,
   type NotebookSelected,
 } from "@/components/notes/dm-notebook";
-import { normalizeTitle, wikiLinkTargets } from "@/lib/wikiLinks";
+import { findUnlinkedMentions, normalizeTitle, wikiLinkTargets } from "@/lib/wikiLinks";
 
 type PageRow = {
   id: string;
@@ -112,20 +112,37 @@ async function loadNotebook(
     });
     if (page) {
       const key = normalizeTitle(page.title);
-      const linking = page.sessionProposal
+      // Other pages that link here, or name this page without linking it.
+      // (Prep pages are all called "Session prep", so they get neither.)
+      const firstWord = page.title.trim().split(/\s+/)[0];
+      const others = page.sessionProposal
         ? []
         : await prisma.dmPage.findMany({
-            where: { campaignId, id: { not: page.id }, content: { contains: "[[" } },
+            where: {
+              campaignId,
+              id: { not: page.id },
+              OR: [
+                { content: { contains: "[[" } },
+                { content: { contains: firstWord, mode: "insensitive" } },
+              ],
+            },
             select: { ...select, content: true },
           });
+      const linking = others.filter((p) => wikiLinkTargets(p.content).has(key));
       selected = {
         ...toNotebookPage(campaignId, page, prefs),
         title: page.title,
         content: page.content,
         updatedAt: page.updatedAt.toISOString(),
         startInEdit,
-        backlinks: linking
-          .filter((p) => wikiLinkTargets(p.content).has(key))
+        backlinks: linking.map((p) => ({
+          id: p.id,
+          label: toNotebookPage(campaignId, p, prefs).label,
+        })),
+        // Pages that already link here are listed above, not again here.
+        mentions: others
+          .filter((p) => !linking.includes(p))
+          .filter((p) => findUnlinkedMentions(p.content, [page.title]).length > 0)
           .map((p) => ({ id: p.id, label: toNotebookPage(campaignId, p, prefs).label })),
       };
     }
