@@ -51,6 +51,7 @@ model User {
   campaignNotes    CampaignNote[]
   playerNotes      PlayerNote[]
   ownedCampaigns   Campaign[]        @relation("CampaignOwner")
+  createdPolls     DatePoll[]        @relation("PollCreatedBy")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -113,7 +114,7 @@ model Campaign {
   ownerId              String
   inviteCode           String             @unique
   discordWebhookUrl    String? // posts campaign notifications (session proposed/cancelled, RSVP, etc.) to Discord
-  discordWebhookEvents NotificationType[] @default([SESSION_PROPOSED, SESSION_RESCHEDULED, SESSION_CONFIRMED, SESSION_CANCELLED, SESSION_REMINDER, RSVP_CHANGED, MEMBER_JOINED, MEMBER_LEFT, RECURRING_DRAFT_READY]) // which event types actually post to discordWebhookUrl
+  discordWebhookEvents NotificationType[] @default([SESSION_PROPOSED, SESSION_RESCHEDULED, SESSION_CONFIRMED, SESSION_CANCELLED, SESSION_REMINDER, DATE_POLL_OPENED, RSVP_CHANGED, MEMBER_JOINED, MEMBER_LEFT, RECURRING_DRAFT_READY]) // which event types actually post to discordWebhookUrl
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 
@@ -125,6 +126,7 @@ model Campaign {
   notes            CampaignNote[]
   playerNotes      PlayerNote[]
   notifications    Notification[]
+  datePolls        DatePoll[]
 }
 
 model CampaignMember {
@@ -139,6 +141,7 @@ model CampaignMember {
 
   rsvps      Rsvp[]
   characters Character[]
+  pollVotes  DatePollVote[]
 
   @@unique([campaignId, userId])
 }
@@ -169,6 +172,7 @@ model SessionProposal {
   proposedBy    User           @relation("ProposedBy", fields: [proposedById], references: [id])
   recurringRule RecurringRule? @relation(fields: [recurringRuleId], references: [id])
   rsvps         Rsvp[]
+  datePoll      DatePoll?
 
   @@index([campaignId, startsAt])
 }
@@ -194,6 +198,62 @@ model Rsvp {
   member          CampaignMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@unique([sessionProposalId, memberId])
+}
+
+enum DatePollStatus {
+  OPEN
+  DECIDED
+  CANCELLED
+}
+
+/// "Which date works?" — the DM offers several candidate start times and
+/// players mark each Yes/Maybe/No. Picking a winner creates an ordinary
+/// SessionProposal (linked via sessionProposalId) with RSVPs pre-filled
+/// from the votes.
+model DatePoll {
+  id                String         @id @default(cuid())
+  campaignId        String
+  createdById       String
+  title             String?
+  durationMinutes   Int
+  status            DatePollStatus @default(OPEN)
+  sessionProposalId String?        @unique
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  campaign        Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  createdBy       User             @relation("PollCreatedBy", fields: [createdById], references: [id])
+  sessionProposal SessionProposal? @relation(fields: [sessionProposalId], references: [id], onDelete: SetNull)
+  options         DatePollOption[]
+
+  @@index([campaignId, status])
+}
+
+model DatePollOption {
+  id       String   @id @default(cuid())
+  pollId   String
+  startsAt DateTime
+
+  poll  DatePoll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes DatePollVote[]
+
+  @@unique([pollId, startsAt])
+}
+
+/// One player's answer for one candidate date. Reuses RsvpStatus for the
+/// same Yes/Maybe/No vocabulary; PENDING is never stored — no row means no
+/// answer yet.
+model DatePollVote {
+  id        String     @id @default(cuid())
+  optionId  String
+  memberId  String
+  choice    RsvpStatus
+  updatedAt DateTime   @updatedAt
+
+  option DatePollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  member CampaignMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([optionId, memberId])
 }
 
 enum RecurrenceFrequency {
@@ -301,6 +361,7 @@ enum NotificationType {
   SESSION_RESCHEDULED
   SESSION_CONFIRMED
   SESSION_REMINDER
+  DATE_POLL_OPENED
 }
 
 model Notification {

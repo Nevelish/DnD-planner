@@ -17,6 +17,9 @@ import, and in-app notifications.
   (paste either into "Join campaign"), join/leave.
 - **Sessions & RSVP**: the DM proposes a date, players respond Yes/No. Backing
   out after saying Yes asks for a quick reason, visible to the whole party.
+- **Date polls**: not sure which day works? The DM offers a few dates,
+  players mark each Yes/Maybe/No, and the best one is highlighted. Picking
+  it proposes the session with everyone's RSVP pre-filled from their vote.
 - **Recurring sessions**: set a cadence (e.g. every other Saturday) and the
   app drafts the next date ahead of time for the DM to review and send.
 - **Calendar**: a month view of every proposed/confirmed session across your

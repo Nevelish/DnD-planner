@@ -15,6 +15,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { NextSessionCard } from "@/components/sessions/next-session-card";
 import { DraftProposalCard } from "@/components/sessions/draft-proposal-card";
+import { OpenPollCard } from "@/components/polls/open-poll-card";
+import { getOpenPolls } from "@/lib/openPolls";
 
 export default async function CampaignOverviewPage({
   params,
@@ -30,7 +32,7 @@ export default async function CampaignOverviewPage({
     completePastSessions([campaignId]),
   ]);
 
-  const [campaign, memberCount, nextProposal, draftProposal, prefs] = await Promise.all([
+  const [campaign, memberCount, nextProposal, draftProposal, prefs, { polls, playerCount }] = await Promise.all([
     prisma.campaign.findUniqueOrThrow({ where: { id: campaignId } }),
     prisma.campaignMember.count({ where: { campaignId } }),
     prisma.sessionProposal.findFirst({
@@ -49,6 +51,7 @@ export default async function CampaignOverviewPage({
         })
       : Promise.resolve(null),
     getDateTimePrefs(userId),
+    getOpenPolls(campaignId),
   ]);
 
   return (
@@ -84,6 +87,17 @@ export default async function CampaignOverviewPage({
       {draftProposal && (
         <DraftProposalCard campaignId={campaignId} proposal={draftProposal} prefs={prefs} />
       )}
+
+      {polls.map((poll) => (
+        <OpenPollCard
+          key={poll.id}
+          campaignId={campaignId}
+          poll={poll}
+          isDM={isDM}
+          currentMemberId={membership.id}
+          playerCount={playerCount}
+        />
+      ))}
 
       <NextSessionCard
         campaignId={campaignId}
