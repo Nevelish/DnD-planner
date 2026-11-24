@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { PUBLIC_USER_SELECT } from "@/lib/publicUser";
 import { requireMembershipForPage } from "@/lib/permissions";
 import { completePastSessions } from "@/lib/completeSessions";
 import { formatSessionDateTimeForUser, getDateTimePrefs } from "@/lib/sessionDateFormat";
@@ -16,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { RsvpButtonGroup } from "@/components/sessions/rsvp-button-group";
 import { RsvpList } from "@/components/sessions/rsvp-list";
 import { ProposeSessionDialog } from "@/components/sessions/propose-session-dialog";
+import { proposalDefaults } from "@/lib/proposalDefaults";
 import { ConfirmProposalButton } from "@/components/sessions/confirm-proposal-button";
 import { CancelProposalButton } from "@/components/sessions/cancel-proposal-button";
 import { SessionPlace } from "@/components/sessions/session-place";
@@ -44,7 +46,7 @@ export default async function SessionDetailPage({
     prisma.sessionProposal.findUnique({
       where: { id: proposalId, campaignId },
       include: {
-        rsvps: { include: { member: { include: { user: true } } } },
+        rsvps: { include: { member: { include: { user: { select: PUBLIC_USER_SELECT } } } } },
         recapAuthor: { select: { name: true, email: true } },
       },
     }),
@@ -104,7 +106,7 @@ export default async function SessionDetailPage({
                 campaignId={campaignId}
                 proposalId={proposal.id}
                 mode="edit"
-                defaultValues={proposal}
+                defaultValues={proposalDefaults(proposal)}
                 trigger={
                   <button className="text-sm font-medium underline underline-offset-2">
                     Edit

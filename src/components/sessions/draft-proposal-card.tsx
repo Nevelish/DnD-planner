@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ProposeSessionDialog } from "@/components/sessions/propose-session-dialog";
+import { proposalDefaults } from "@/lib/proposalDefaults";
 import { formatSessionDateTimeForUser, type DateTimePrefs } from "@/lib/sessionDateFormat";
 
 export function DraftProposalCard({
@@ -42,7 +43,7 @@ export function DraftProposalCard({
           campaignId={campaignId}
           proposalId={proposal.id}
           mode="publish"
-          defaultValues={proposal}
+          defaultValues={proposalDefaults(proposal)}
           trigger={<button className="text-sm font-medium underline underline-offset-2">Review &amp; propose</button>}
         />
       </CardContent>
