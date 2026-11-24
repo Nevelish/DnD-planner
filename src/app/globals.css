@@ -346,14 +346,15 @@ body {
   .planner-hero::before { background-position: 58% center; }
 }
 
-/* The same artwork behind every page in the default skin, so signed-in
-   pages match the landing page. Fixed to the viewport (it doesn't scroll
+/* The same artwork behind every page, so signed-in pages match the
+   landing page. Fixed to the viewport (it doesn't scroll
    or tile on long pages) and fainter than the hero, since cards and text
    sit on top of it here. The light artwork is pale grey on near-white,
    so it needs a much stronger opacity than the dark one to read at all.
-   The landing hero paints its own copy over this, and the NieR skin
-   keeps its own look. */
-:root:not([data-skin="nier"]) body::before {
+   NieR's artwork is more detailed and sits over its beige "paper", so it
+   needs less (and too much greys the paper out). The landing hero paints
+   its own copy over this. */
+body::before {
   content: "";
   position: fixed;
   inset: 0;
@@ -366,10 +367,18 @@ body {
   opacity: 0.7;
 }
 
-.dark:not([data-skin="nier"]) body::before {
+.dark body::before {
   opacity: 0.25;
 }
 
+:root[data-skin="nier"] body::before {
+  opacity: 0.4;
+}
+
+.dark[data-skin="nier"] body::before {
+  opacity: 0.5;
+}
+
 @media (max-width: 640px) {
-  :root:not([data-skin="nier"]) body::before { background-position: 58% center; }
+  body::before { background-position: 58% center; }
 }
