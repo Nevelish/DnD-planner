@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarkdownRenderer } from "@/components/notes/markdown-renderer";
 import { MarkdownToolbar } from "@/components/notes/markdown-toolbar";
+import { LinkingHelp } from "@/components/notes/linking-help";
 import { openWikiLinkQuery } from "@/lib/wikiLinks";
 import type { CampaignNoteType } from "@prisma/client";
 
@@ -173,10 +174,13 @@ export function NotesEditor({
   return (
     <Tabs defaultValue={defaultTab}>
       <div className="flex items-center justify-between">
-        <TabsList>
-          <TabsTrigger value="edit">Edit</TabsTrigger>
-          <TabsTrigger value="preview">Preview</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center gap-1">
+          <TabsList>
+            <TabsTrigger value="edit">Edit</TabsTrigger>
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+          </TabsList>
+          {linkTargets && <LinkingHelp />}
+        </div>
         <div className="flex gap-2">
           {onCancel && (
             <Button
