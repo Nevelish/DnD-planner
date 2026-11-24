@@ -176,6 +176,7 @@ model SessionProposal {
 enum RsvpStatus {
   PENDING
   YES
+  MAYBE
   NO
 }
 
