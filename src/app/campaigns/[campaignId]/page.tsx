@@ -18,6 +18,7 @@ import { DraftProposalCard } from "@/components/sessions/draft-proposal-card";
 import { OpenPollCard } from "@/components/polls/open-poll-card";
 import { getOpenPolls } from "@/lib/openPolls";
 import { getLastSessionPlace } from "@/lib/lastSessionPlace";
+import { PreviouslyOnCard } from "@/components/sessions/previously-on-card";
 
 export default async function CampaignOverviewPage({
   params,
@@ -33,7 +34,7 @@ export default async function CampaignOverviewPage({
     completePastSessions([campaignId]),
   ]);
 
-  const [campaign, memberCount, nextProposal, draftProposal, prefs, { polls, playerCount }, lastPlace] = await Promise.all([
+  const [campaign, memberCount, nextProposal, draftProposal, prefs, { polls, playerCount }, lastPlace, lastRecap] = await Promise.all([
     prisma.campaign.findUniqueOrThrow({ where: { id: campaignId } }),
     prisma.campaignMember.count({ where: { campaignId } }),
     prisma.sessionProposal.findFirst({
@@ -54,6 +55,11 @@ export default async function CampaignOverviewPage({
     getDateTimePrefs(userId),
     getOpenPolls(campaignId),
     isDM ? getLastSessionPlace(campaignId) : undefined,
+    prisma.sessionProposal.findFirst({
+      where: { campaignId, status: "COMPLETED", recap: { not: null } },
+      orderBy: { startsAt: "desc" },
+      select: { id: true, title: true, startsAt: true, recap: true },
+    }),
   ]);
 
   return (
@@ -109,6 +115,14 @@ export default async function CampaignOverviewPage({
         prefs={prefs}
         lastPlace={lastPlace}
       />
+
+      {lastRecap?.recap && (
+        <PreviouslyOnCard
+          campaignId={campaignId}
+          session={{ ...lastRecap, recap: lastRecap.recap }}
+          prefs={prefs}
+        />
+      )}
     </div>
   );
 }

@@ -21,7 +21,8 @@ const DISCORD_WEBHOOK_URL_PATTERN =
 
 // Event types a campaign's Discord webhook can be toggled on/off for.
 // CAMPAIGN_INVITE isn't included — nothing in the app sends that type yet,
-// so there's nothing meaningful to toggle for it.
+// so there's nothing meaningful to toggle for it. SAFETY_TOOL_ADDED isn't
+// either: lines and veils stay inside the app, never in a Discord channel.
 export const DISCORD_WEBHOOK_EVENT_TYPES = [
   "SESSION_PROPOSED",
   "SESSION_RESCHEDULED",
@@ -29,6 +30,7 @@ export const DISCORD_WEBHOOK_EVENT_TYPES = [
   "SESSION_CANCELLED",
   "SESSION_REMINDER",
   "DATE_POLL_OPENED",
+  "RECAP_POSTED",
   "RSVP_CHANGED",
   "MEMBER_JOINED",
   "MEMBER_LEFT",
@@ -45,6 +47,7 @@ export const DISCORD_WEBHOOK_EVENT_LABELS: Record<
   SESSION_CANCELLED: "Session cancelled",
   SESSION_REMINDER: "Reminder 24 hours before",
   DATE_POLL_OPENED: "Date poll opened",
+  RECAP_POSTED: "Session recap posted",
   RSVP_CHANGED: "RSVP updated",
   MEMBER_JOINED: "Player joined",
   MEMBER_LEFT: "Player left",

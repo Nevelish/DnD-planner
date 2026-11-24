@@ -28,6 +28,7 @@ export default async function CampaignLayout({
     { href: `/campaigns/${campaignId}/sessions`, label: "Sessions" },
     { href: `/campaigns/${campaignId}/roster`, label: "Roster" },
     { href: `/campaigns/${campaignId}/notes`, label: "Notes" },
+    { href: `/campaigns/${campaignId}/safety`, label: "Safety" },
     { href: `/campaigns/${campaignId}/members`, label: "Members" },
     ...(isDM
       ? [{ href: `/campaigns/${campaignId}/settings`, label: "Settings" }]

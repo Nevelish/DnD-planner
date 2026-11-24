@@ -17,6 +17,9 @@ const DEFAULT_DISCORD_EMBED_COLORS: Record<NotificationType, number> = {
   SESSION_CANCELLED: 0xd9534f,
   SESSION_REMINDER: 0x6c8ebf,
   DATE_POLL_OPENED: 0x8e6fbd,
+  RECAP_POSTED: 0x6c8ebf,
+  // Never posted (not a webhook toggle), but the map covers every type.
+  SAFETY_TOOL_ADDED: 0xd9822b,
   RSVP_CHANGED: 0xb87e40,
   RECURRING_DRAFT_READY: 0x8e6fbd,
 };
@@ -44,6 +47,8 @@ async function notifyDiscord(
   },
 ) {
   if (!campaignId) return;
+  // Lines and veils are private to the group; never post them to a channel.
+  if (input.type === "SAFETY_TOOL_ADDED") return;
 
   const campaign = await prisma.campaign.findUnique({
     where: { id: campaignId },

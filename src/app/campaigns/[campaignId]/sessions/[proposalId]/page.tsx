@@ -19,6 +19,7 @@ import { ProposeSessionDialog } from "@/components/sessions/propose-session-dial
 import { ConfirmProposalButton } from "@/components/sessions/confirm-proposal-button";
 import { CancelProposalButton } from "@/components/sessions/cancel-proposal-button";
 import { SessionPlace } from "@/components/sessions/session-place";
+import { RecapSection } from "@/components/sessions/recap-section";
 
 const statusVariant = {
   DRAFT: "secondary",
@@ -44,6 +45,7 @@ export default async function SessionDetailPage({
       where: { id: proposalId, campaignId },
       include: {
         rsvps: { include: { member: { include: { user: true } } } },
+        recapAuthor: { select: { name: true, email: true } },
       },
     }),
     getDateTimePrefs(userId),
@@ -51,6 +53,11 @@ export default async function SessionDetailPage({
   if (!proposal) notFound();
 
   const myRsvp = proposal.rsvps.find((r) => r.member.id === membership.id);
+  const me = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { name: true, email: true },
+  });
+  const currentUserName = me.name ?? me.email ?? "you";
   const isActive = proposal.status === "PROPOSED" || proposal.status === "CONFIRMED";
 
   return (
@@ -114,6 +121,25 @@ export default async function SessionDetailPage({
           <RsvpList rsvps={proposal.rsvps} />
         </CardContent>
       </Card>
+
+      {proposal.status === "COMPLETED" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recap</CardTitle>
+            <CardDescription>What happened this session, for the campaign log.</CardDescription>
+          </CardHeader>
+          <CardContent className="pb-6">
+            <RecapSection
+              campaignId={campaignId}
+              proposalId={proposal.id}
+              initialContent={proposal.recap}
+              initialUpdatedAt={proposal.recapUpdatedAt?.toISOString() ?? null}
+              initialAuthorName={proposal.recapAuthor?.name ?? proposal.recapAuthor?.email ?? null}
+              currentUserName={currentUserName}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

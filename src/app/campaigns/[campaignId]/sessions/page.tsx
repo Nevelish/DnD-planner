@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ScrollTextIcon } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
 import { requireMembershipForPage } from "@/lib/permissions";
@@ -10,6 +11,7 @@ import {
 } from "@/lib/sessionDateFormat";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ProposeSessionDialog } from "@/components/sessions/propose-session-dialog";
 import { CreatePollDialog } from "@/components/polls/create-poll-dialog";
 import { OpenPollCard } from "@/components/polls/open-poll-card";
@@ -50,12 +52,19 @@ export default async function SessionsPage({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Sessions</h2>
-        {isDM && (
-          <div className="flex flex-wrap gap-2">
-            <CreatePollDialog campaignId={campaignId} />
-            <ProposeSessionDialog campaignId={campaignId} mode="create" defaultValues={lastPlace} />
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/campaigns/${campaignId}/log`}>
+              <ScrollTextIcon /> Campaign log
+            </Link>
+          </Button>
+          {isDM && (
+            <>
+              <CreatePollDialog campaignId={campaignId} />
+              <ProposeSessionDialog campaignId={campaignId} mode="create" defaultValues={lastPlace} />
+            </>
+          )}
+        </div>
       </div>
 
       {polls.map((poll) => (
@@ -84,6 +93,7 @@ export default async function SessionsPage({
                     <CardDescription>
                       {formatSessionDateTimeForUser(p.startsAt, prefs)}
                       {p.format ? ` · ${SESSION_FORMAT_LABELS[p.format]}` : ""}
+                      {p.recap ? " · Recap" : ""}
                     </CardDescription>
                   </div>
                   <Badge variant={statusVariant[p.status]}>{p.status}</Badge>
