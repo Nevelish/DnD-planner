@@ -43,7 +43,7 @@ export default async function SessionDetailPage({
 
   await completePastSessions([campaignId]);
 
-  const [proposal, prefs, prep] = await Promise.all([
+  const [proposal, prefs, prep, linkablePages] = await Promise.all([
     prisma.sessionProposal.findUnique({
       where: { id: proposalId, campaignId },
       include: {
@@ -60,6 +60,14 @@ export default async function SessionDetailPage({
           select: { id: true, content: true, updatedAt: true },
         })
       : Promise.resolve(null),
+    // Notebook titles, so [[links]] in the prep resolve. Also DM-only.
+    isDM
+      ? prisma.dmPage.findMany({
+          where: { campaignId, sessionProposalId: null },
+          select: { id: true, title: true },
+          orderBy: { updatedAt: "desc" },
+        })
+      : Promise.resolve([]),
   ]);
   if (!proposal) notFound();
 
@@ -144,6 +152,7 @@ export default async function SessionDetailPage({
               campaignId={campaignId}
               proposalId={proposal.id}
               initialPrep={prep && { ...prep, updatedAt: prep.updatedAt.toISOString() }}
+              linkablePages={linkablePages}
             />
           </CardContent>
         </Card>

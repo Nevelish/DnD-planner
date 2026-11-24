@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireDM } from "@/lib/permissions";
 import { NOTE_TEMPLATES, isNoteTemplateKey } from "@/lib/noteTemplates";
+import { normalizeTitle, renameWikiLinks, wikiLinkTargets } from "@/lib/wikiLinks";
 
 // Everything here is DM-only: every action starts with requireDM and every
 // query is scoped to that campaign.
@@ -88,18 +89,49 @@ export async function renameDmPage(campaignId: string, pageId: string, rawTitle:
   if (!title.success) {
     throw new Error(title.error.issues[0]?.message ?? "Give the page a title.");
   }
-  // A rename shouldn't count as an edit to the text, or it would trip the
-  // overwrite check for an editor that's open on the same page.
   const page = await prisma.dmPage.findFirst({
     where: { id: pageId, campaignId },
-    select: { updatedAt: true },
+    select: { title: true, updatedAt: true },
   });
   if (!page) throw new Error("Page not found.");
-  await prisma.dmPage.update({
-    where: { id: pageId },
-    data: { title: title.data, updatedAt: page.updatedAt },
-  });
+
+  // Other pages' [[Old title]] links follow the page to its new title.
+  // Only when the title really changed, and only if no other page still
+  // has the old title (those links would still have somewhere to go).
+  const oldKey = normalizeTitle(page.title);
+  const titleChanged = oldKey !== normalizeTitle(title.data);
+  const stillTaken =
+    titleChanged &&
+    (await prisma.dmPage.findMany({
+      where: { campaignId, sessionProposalId: null, id: { not: pageId } },
+      select: { title: true },
+    })).some((p) => normalizeTitle(p.title) === oldKey);
+  const linking =
+    titleChanged && !stillTaken
+      ? (
+          await prisma.dmPage.findMany({
+            where: { campaignId, id: { not: pageId }, content: { contains: "[[" } },
+            select: { id: true, content: true },
+          })
+        ).filter((p) => wikiLinkTargets(p.content).has(oldKey))
+      : [];
+
+  await prisma.$transaction([
+    // A rename shouldn't count as an edit to this page's text, or it would
+    // trip the overwrite check for an editor that's open on it.
+    prisma.dmPage.update({
+      where: { id: pageId },
+      data: { title: title.data, updatedAt: page.updatedAt },
+    }),
+    ...linking.map((p) =>
+      prisma.dmPage.update({
+        where: { id: p.id },
+        data: { content: renameWikiLinks(p.content, page.title, title.data) },
+      }),
+    ),
+  ]);
   revalidateNotebook(campaignId);
+  return { updatedLinks: linking.length };
 }
 
 export async function setDmPagePinned(campaignId: string, pageId: string, pinned: boolean) {

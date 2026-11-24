@@ -4,6 +4,7 @@ import type { RefObject } from "react";
 import {
   BoldIcon,
   CodeIcon,
+  FileSymlinkIcon,
   Heading1Icon,
   Heading2Icon,
   Heading3Icon,
@@ -34,10 +35,13 @@ export function MarkdownToolbar({
   textareaRef,
   value,
   onChange,
+  onPageLink,
 }: {
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   value: string;
   onChange: (next: string) => void;
+  /** Shows a "link to a notebook page" button that starts a [[link]]. */
+  onPageLink?: () => void;
 }) {
   function handleAction(action: MarkdownAction) {
     const textarea = textareaRef.current;
@@ -72,6 +76,19 @@ export function MarkdownToolbar({
           <Icon className="size-4" />
         </Button>
       ))}
+      {onPageLink && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-7"
+          title="Link to a notebook page"
+          aria-label="Link to a notebook page"
+          onClick={onPageLink}
+        >
+          <FileSymlinkIcon className="size-4" />
+        </Button>
+      )}
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { NotebookPenIcon, PencilIcon } from "lucide-react";
 
 import { ensureSessionPrep, saveDmPage } from "@/lib/actions/dmPages";
 import { Button } from "@/components/ui/button";
-import { MarkdownRenderer } from "@/components/notes/markdown-renderer";
+import { NotebookMarkdown, type LinkablePage } from "@/components/notes/notebook-markdown";
 import { NotesEditor } from "@/components/notes/notes-editor";
 
 type Prep = { id: string; content: string; updatedAt: string };
@@ -18,10 +18,13 @@ export function SessionPrepSection({
   campaignId,
   proposalId,
   initialPrep,
+  linkablePages,
 }: {
   campaignId: string;
   proposalId: string;
   initialPrep: Prep | null;
+  /** Notebook pages that [[links]] in the prep can point at. */
+  linkablePages: LinkablePage[];
 }) {
   const [prep, setPrep] = useState<Prep | null>(initialPrep);
   const [editing, setEditing] = useState(false);
@@ -65,13 +68,18 @@ export function SessionPrepSection({
           setEditing(false);
         }}
         onCancel={() => setEditing(false)}
+        linkTargets={linkablePages.map((p) => p.title)}
+        renderPreview={(content) => (
+          <NotebookMarkdown campaignId={campaignId} content={content} pages={linkablePages} />
+        )}
+        placeholder={"Markdown works. Link notebook pages with [[Page title]]."}
       />
     );
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <MarkdownRenderer content={prep.content} />
+      <NotebookMarkdown campaignId={campaignId} content={prep.content} pages={linkablePages} />
       <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-3">
         <Button asChild size="sm" variant="ghost">
           <Link href={`/campaigns/${campaignId}/notes?page=${prep.id}`}>Open in notebook</Link>

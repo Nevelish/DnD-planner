@@ -3,11 +3,11 @@ export const NOTE_TEMPLATES = {
   blank: { label: "Blank page", content: "" },
   npc: {
     label: "NPC",
-    content: `**Role:** \n**Appearance:** \n**Voice & mannerisms:** \n\n## Wants\n\n## Secrets\n\n## Relationships\n\n## Notes\n`,
+    content: `- **Role:** \n- **Appearance:** \n- **Voice & mannerisms:** \n\n## Wants\n\n## Secrets\n\n## Relationships\n\n## Notes\n`,
   },
   location: {
     label: "Location",
-    content: `**Type:** \n**Where:** \n\n## First impression\nWhat the party sees, hears and smells when they arrive.\n\n## Who's here\n\n## Secrets\n\n## Hooks\n`,
+    content: `- **Type:** \n- **Where:** \n\n## First impression\nWhat the party sees, hears and smells when they arrive.\n\n## Who's here\n\n## Secrets\n\n## Hooks\n`,
   },
   sessionPrep: {
     label: "Session prep",
