@@ -11,6 +11,9 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProposeSessionDialog } from "@/components/sessions/propose-session-dialog";
+import { CreatePollDialog } from "@/components/polls/create-poll-dialog";
+import { OpenPollCard } from "@/components/polls/open-poll-card";
+import { getOpenPolls } from "@/lib/openPolls";
 
 const statusVariant = {
   DRAFT: "secondary",
@@ -31,20 +34,37 @@ export default async function SessionsPage({
 
   await completePastSessions([campaignId]);
 
-  const [proposals, prefs] = await Promise.all([
+  const [proposals, prefs, { polls, playerCount }] = await Promise.all([
     prisma.sessionProposal.findMany({
       where: { campaignId, status: isDM ? undefined : { not: "DRAFT" } },
       orderBy: { startsAt: "desc" },
     }),
     getDateTimePrefs(userId),
+    getOpenPolls(campaignId),
   ]);
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Sessions</h2>
-        {isDM && <ProposeSessionDialog campaignId={campaignId} mode="create" />}
+        {isDM && (
+          <div className="flex flex-wrap gap-2">
+            <CreatePollDialog campaignId={campaignId} />
+            <ProposeSessionDialog campaignId={campaignId} mode="create" />
+          </div>
+        )}
       </div>
+
+      {polls.map((poll) => (
+        <OpenPollCard
+          key={poll.id}
+          campaignId={campaignId}
+          poll={poll}
+          isDM={isDM}
+          currentMemberId={membership.id}
+          playerCount={playerCount}
+        />
+      ))}
 
       {proposals.length === 0 ? (
         <p className="text-muted-foreground">No sessions yet.</p>

@@ -5,6 +5,11 @@ import { toast } from "sonner";
 import { CalendarPlusIcon } from "lucide-react";
 
 import { createProposal, updateProposal, publishDraft } from "@/lib/actions/session";
+import {
+  addMinutesToLocalValue,
+  localInputToISO,
+  toLocalInputValue,
+} from "@/lib/localDateTimeInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,26 +31,6 @@ type ProposalDefaults = {
 };
 
 const DEFAULT_DURATION_MINUTES = 180;
-
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
-
-/** Formats a Date as the local "YYYY-MM-DDTHH:mm" a datetime-local input expects. */
-function toLocalInputValue(date?: Date | null) {
-  if (!date) return "";
-  const d = new Date(date);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-/** Adds minutes to a "YYYY-MM-DDTHH:mm" string, staying in the same local wall-clock time. */
-function addMinutesToLocalValue(value: string, minutes: number) {
-  if (!value) return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  d.setMinutes(d.getMinutes() + minutes);
-  return toLocalInputValue(d);
-}
 
 /**
  * Radix only mounts a Dialog's content while it's open, so this remounting
@@ -145,14 +130,10 @@ export function ProposeSessionDialog({
   const [isPending, startTransition] = useTransition();
 
   function handleSubmit(formData: FormData) {
-    // datetime-local values carry no timezone; the browser reads them as its
-    // own local time, while the server would read them in the container's
-    // (UTC). Sending an absolute instant keeps what the DM typed intact.
     for (const key of ["startsAt", "endsAt"]) {
       const value = formData.get(key);
-      if (typeof value !== "string" || !value) continue;
-      const date = new Date(value);
-      if (!Number.isNaN(date.getTime())) formData.set(key, date.toISOString());
+      const iso = typeof value === "string" ? localInputToISO(value) : null;
+      if (iso) formData.set(key, iso);
     }
 
     startTransition(async () => {

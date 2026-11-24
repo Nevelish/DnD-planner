@@ -15,6 +15,7 @@ const DEFAULT_DISCORD_EMBED_COLORS: Record<NotificationType, number> = {
   SESSION_CONFIRMED: 0x57a64a,
   SESSION_CANCELLED: 0xd9534f,
   SESSION_REMINDER: 0x6c8ebf,
+  DATE_POLL_OPENED: 0x8e6fbd,
   RSVP_CHANGED: 0xb87e40,
   RECURRING_DRAFT_READY: 0x8e6fbd,
 };
@@ -28,6 +29,7 @@ const MENTION_EVENT_TYPES: NotificationType[] = [
   "SESSION_RESCHEDULED",
   "SESSION_CANCELLED",
   "SESSION_REMINDER",
+  "DATE_POLL_OPENED",
 ];
 
 /** Mirrors whatever just got written to the in-app Notification to the
