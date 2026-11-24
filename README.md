@@ -51,6 +51,12 @@ import, and in-app notifications.
 - **Notification settings**: each person picks which events show up in
   their bell and which ones @mention them on Discord (e.g. keep reminders,
   skip every RSVP change). Everything is on until you switch it off.
+- **Profile pictures**: optional; upload one under Account and it shows next
+  to your name in the nav, member lists and RSVPs. Discord sign-ins use
+  the Discord picture until you upload your own; otherwise initials. Photos
+  are cropped, shrunk and re-encoded on upload, which also strips hidden
+  data like phone GPS tags, and they're stored in Postgres (no extra
+  volume needed).
 - **Account settings**: change your password (email/password accounts only).
 - **Dark mode**: light/dark/system, toggle in the nav.
 - **Admin panel**: the first person to ever sign in becomes admin

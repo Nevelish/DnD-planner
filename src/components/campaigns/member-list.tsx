@@ -8,11 +8,13 @@ import { UserMinusIcon } from "lucide-react";
 import { removeMember, leaveCampaign } from "@/lib/actions/campaign";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import type { AvatarUser } from "@/lib/avatar";
 
 type MemberRow = {
   id: string;
   role: "DM" | "PLAYER";
-  user: { id: string; name: string | null; email: string | null };
+  user: AvatarUser & { id: string; name: string | null; email: string | null };
 };
 
 export function MemberList({
@@ -61,20 +63,23 @@ export function MemberList({
             key={member.id}
             className="flex items-center justify-between gap-3 px-4 py-3"
           >
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">
-                {member.user.name ?? member.user.email}
-                {isSelf && (
-                  <span className="ml-1.5 text-xs text-muted-foreground">
-                    (you)
+            <div className="flex min-w-0 items-center gap-3">
+              <UserAvatar user={member.user} className="size-9" />
+              <div className="flex min-w-0 flex-col">
+                <span className="text-sm font-medium">
+                  {member.user.name ?? member.user.email}
+                  {isSelf && (
+                    <span className="ml-1.5 text-xs text-muted-foreground">
+                      (you)
+                    </span>
+                  )}
+                </span>
+                {member.user.email && member.user.name && (
+                  <span className="truncate text-xs text-muted-foreground">
+                    {member.user.email}
                   </span>
                 )}
-              </span>
-              {member.user.email && member.user.name && (
-                <span className="text-xs text-muted-foreground">
-                  {member.user.email}
-                </span>
-              )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant={member.role === "DM" ? "default" : "secondary"}>

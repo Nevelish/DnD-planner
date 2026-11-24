@@ -2,6 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { PUBLIC_USER_SELECT } from "@/lib/publicUser";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/layout/user-menu";
 import { NotificationBell } from "@/components/layout/notification-bell";
@@ -12,6 +14,11 @@ import { NavLinks } from "@/components/layout/nav-links";
 export async function NavBar() {
   const session = await auth();
   const user = session?.user;
+  // The session token doesn't carry the picture, so look it up (it changes
+  // without signing in again).
+  const avatarUser = user?.id
+    ? await prisma.user.findUnique({ where: { id: user.id }, select: PUBLIC_USER_SELECT })
+    : null;
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -33,6 +40,7 @@ export async function NavBar() {
             <>
               <NotificationBell />
               <UserMenu
+                avatar={avatarUser ?? { id: user.id ?? "", name: user.name, email: user.email }}
                 name={user.name}
                 email={user.email}
                 isAdmin={user.role === "ADMIN"}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { LogOutIcon, SettingsIcon, ShieldIcon, UserIcon } from "lucide-react";
+import { LogOutIcon, SettingsIcon, ShieldIcon } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -12,13 +12,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import type { AvatarUser } from "@/lib/avatar";
 
 export function UserMenu({
+  avatar,
   name,
   email,
   isAdmin,
 }: {
+  avatar: AvatarUser;
   name?: string | null;
   email?: string | null;
   isAdmin?: boolean;
@@ -26,9 +29,13 @@ export function UserMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="rounded-full">
-          <UserIcon />
-        </Button>
+        <button
+          type="button"
+          aria-label="Account menu"
+          className="rounded-full outline-none transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <UserAvatar user={avatar} className="size-9" />
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel className="flex flex-col">

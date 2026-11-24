@@ -45,6 +45,7 @@ model User {
   // default. Set in Account settings → Notifications.
   mutedNotificationTypes NotificationType[] @default([]) // no in-app notification for these
   mutedMentionTypes      NotificationType[] @default([]) // no Discord @mention for these
+  avatarUpdatedAt        DateTime? // set while an uploaded picture exists; doubles as its cache-busting version
 
   accounts Account[]
   sessions Session[]
@@ -57,6 +58,7 @@ model User {
   ownedCampaigns   Campaign[]        @relation("CampaignOwner")
   createdPolls     DatePoll[]        @relation("PollCreatedBy")
   recapsEdited     SessionProposal[] @relation("RecapAuthor")
+  avatar           UserAvatar?
   safetyEntries    SafetyEntry[]
 
   createdAt DateTime @default(now())
@@ -422,4 +424,14 @@ model SafetyEntry {
   author   User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
 
   @@index([campaignId])
+}
+
+/// An uploaded profile picture: a 256×256 WebP re-encoded on the server.
+/// Kept out of the User row so the image bytes aren't loaded with every user.
+model UserAvatar {
+  userId    String   @id
+  data      Bytes
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
