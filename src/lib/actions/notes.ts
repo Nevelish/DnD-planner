@@ -93,36 +93,13 @@ export async function upsertCampaignNote(
   return { updatedAt: saved.updatedAt.toISOString() };
 }
 
-export async function upsertPlayerNote(campaignId: string, formData: FormData) {
-  const membership = await requireMember(campaignId);
-  const content = String(formData.get("content") ?? "");
-  if (content.length > MAX_NOTE_LENGTH) {
-    throw new Error("That note is too long.");
-  }
-  const expectedUpdatedAtRaw = formData.get("expectedUpdatedAt");
-  const expectedUpdatedAt = expectedUpdatedAtRaw
-    ? new Date(String(expectedUpdatedAtRaw))
-    : undefined;
-
-  const saved = await saveWithConflictCheck(
-    () =>
-      prisma.playerNote.create({
-        data: { campaignId, userId: membership.userId, content },
-        select: { updatedAt: true },
-      }),
-    (expected) =>
-      prisma.playerNote.updateMany({
-        where: { campaignId, userId: membership.userId, updatedAt: expected },
-        data: { content },
-      }),
-    () =>
-      prisma.playerNote.findUnique({
-        where: { campaignId_userId: { campaignId, userId: membership.userId } },
-        select: { updatedAt: true },
-      }),
-    expectedUpdatedAt,
-  );
-
-  revalidatePath(`/campaigns/${campaignId}/notes`);
-  return { updatedAt: saved.updatedAt.toISOString() };
+export async function upsertPlayerNote(
+  campaignId: string,
+  formData: FormData,
+): Promise<{ updatedAt: string }> {
+  // Players' private notes moved to their own notebook (NotebookPage); the
+  // old single note is kept read-only in the database, never written.
+  void formData;
+  await requireMember(campaignId);
+  throw new Error("Your notes now live in your notebook. Reload the page.");
 }

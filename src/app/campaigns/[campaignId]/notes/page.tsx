@@ -10,11 +10,11 @@ import {
 } from "@/components/ui/card";
 import { NotesEditor } from "@/components/notes/notes-editor";
 import {
-  DmNotebook,
+  Notebook,
   type NotebookPage,
   type NotebookSearch,
   type NotebookSelected,
-} from "@/components/notes/dm-notebook";
+} from "@/components/notes/notebook";
 import { findUnlinkedMentions, normalizeTitle, wikiLinkTargets } from "@/lib/wikiLinks";
 
 type PageRow = {
@@ -44,8 +44,12 @@ function snippet(content: string, q: string): string {
   return `${start > 0 ? "…" : ""}${flat.slice(start, at + q.length + 70)}${at + q.length + 70 < flat.length ? "…" : ""}`;
 }
 
+/** One notebook's pages: the DM's (ownerId null) or one player's. Every
+ * query here filters on `scope`, so pages from another notebook can't
+ * appear, even if their id is put in the URL. */
 async function loadNotebook(
   campaignId: string,
+  ownerId: string | null,
   prefs: DateTimePrefs,
   requestedId: string | undefined,
   rawQuery: string | undefined,
@@ -58,8 +62,9 @@ async function loadNotebook(
     updatedAt: true,
     sessionProposal: { select: { id: true, title: true, startsAt: true } },
   } as const;
-  const rows = await prisma.dmPage.findMany({
-    where: { campaignId },
+  const scope = { campaignId, ownerId };
+  const rows = await prisma.notebookPage.findMany({
+    where: scope,
     select,
     orderBy: { updatedAt: "desc" },
   });
@@ -81,9 +86,9 @@ async function loadNotebook(
   const q = rawQuery?.trim().slice(0, 100);
   let search: NotebookSearch | null = null;
   if (q) {
-    const hits = await prisma.dmPage.findMany({
+    const hits = await prisma.notebookPage.findMany({
       where: {
-        campaignId,
+        ...scope,
         OR: [
           { title: { contains: q, mode: "insensitive" } },
           { content: { contains: q, mode: "insensitive" } },
@@ -106,8 +111,8 @@ async function loadNotebook(
   let selected: NotebookSelected | null = null;
   const selectedId = pages.some((p) => p.id === requestedId) ? requestedId : pages[0]?.id;
   if (!search && selectedId) {
-    const page = await prisma.dmPage.findFirst({
-      where: { id: selectedId, campaignId },
+    const page = await prisma.notebookPage.findFirst({
+      where: { ...scope, id: selectedId },
       select: { ...select, content: true },
     });
     if (page) {
@@ -117,9 +122,9 @@ async function loadNotebook(
       const firstWord = page.title.trim().split(/\s+/)[0];
       const others = page.sessionProposal
         ? []
-        : await prisma.dmPage.findMany({
+        : await prisma.notebookPage.findMany({
             where: {
-              campaignId,
+              ...scope,
               id: { not: page.id },
               OR: [
                 { content: { contains: "[[" } },
@@ -163,43 +168,38 @@ export default async function NotesPage({
   const { userId, membership } = await requireMembershipForPage(campaignId);
   const isDM = membership.role === "DM";
 
-  const [partyNote, playerNote, notebook] = await Promise.all([
+  const [partyNote, notebook] = await Promise.all([
     prisma.campaignNote.findUnique({
       where: { campaignId_type: { campaignId, type: "PARTY" } },
     }),
-    isDM
-      ? Promise.resolve(null)
-      : prisma.playerNote.findUnique({
-          where: { campaignId_userId: { campaignId, userId } },
-        }),
-    // The DM's notebook is only ever loaded for the DM.
-    isDM
-      ? getDateTimePrefs(userId).then((prefs) => loadNotebook(campaignId, prefs, requestedPage, q, edit === "1"))
-      : Promise.resolve(null),
+    // The DM gets the campaign's DM notebook; a player gets their own.
+    getDateTimePrefs(userId).then((prefs) =>
+      loadNotebook(campaignId, isDM ? null : userId, prefs, requestedPage, q, edit === "1"),
+    ),
   ]);
 
   return (
     <div className="flex flex-col gap-6">
-      {notebook && (
-        <Card>
-          <CardHeader>
-            <CardTitle>DM notebook</CardTitle>
-            <CardDescription>
-              Only you can see this. NPCs, places, plot threads, and the prep
-              for each session.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pb-6">
-            <DmNotebook
-              campaignId={campaignId}
-              pages={notebook.pages}
-              selected={notebook.selected}
-              search={notebook.search}
-              linkablePages={notebook.linkablePages}
-            />
-          </CardContent>
-        </Card>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>{isDM ? "DM notebook" : "My notebook"}</CardTitle>
+          <CardDescription>
+            {isDM
+              ? "Only you can see this. NPCs, places, plot threads, and the prep for each session."
+              : "Only you can see this, not even the DM. People you've met, places, clues, and notes from each session."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pb-6">
+          <Notebook
+            campaignId={campaignId}
+            kind={isDM ? "dm" : "player"}
+            pages={notebook.pages}
+            selected={notebook.selected}
+            search={notebook.search}
+            linkablePages={notebook.linkablePages}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -218,23 +218,6 @@ export default async function NotesPage({
           />
         </CardContent>
       </Card>
-
-      {!isDM && (
-        <Card>
-          <CardHeader>
-            <CardTitle>My notes</CardTitle>
-            <CardDescription>Private — only you can see this.</CardDescription>
-          </CardHeader>
-          <CardContent className="pb-6">
-            <NotesEditor
-              campaignId={campaignId}
-              initialContent={playerNote?.content ?? ""}
-              initialUpdatedAt={playerNote?.updatedAt.toISOString()}
-              placeholder="Personal notes just for you…"
-            />
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

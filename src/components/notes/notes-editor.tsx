@@ -48,6 +48,7 @@ export function NotesEditor({
   linkTargets,
   renderPreview,
   defaultTab = "edit",
+  linkHelp = "dm",
 }: {
   campaignId: string;
   /** Omit for the current user's own private note (PlayerNote). */
@@ -69,6 +70,8 @@ export function NotesEditor({
   /** Replaces the plain markdown preview (e.g. to resolve [[links]]). */
   renderPreview?: (content: string) => ReactNode;
   defaultTab?: "edit" | "preview";
+  /** Which notebook the "?" help describes. */
+  linkHelp?: "dm" | "player";
 }) {
   const [content, setContent] = useState(initialContent);
   const [lastSavedContent, setLastSavedContent] = useState(initialContent);
@@ -231,7 +234,7 @@ export function NotesEditor({
             <TabsTrigger value="edit">Edit</TabsTrigger>
             <TabsTrigger value="preview">Preview</TabsTrigger>
           </TabsList>
-          {linkTargets && <LinkingHelp />}
+          {linkTargets && <LinkingHelp kind={linkHelp} />}
         </div>
         <div className="flex gap-2">
           {onCancel && (

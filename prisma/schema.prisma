@@ -60,6 +60,7 @@ model User {
   addedPollDates   DatePollOption[]  @relation("PollOptionAddedBy")
   recapsEdited     SessionProposal[] @relation("RecapAuthor")
   avatar           UserAvatar?
+  notebookPages    NotebookPage[]    @relation("NotebookPages")
   safetyEntries    SafetyEntry[]
 
   createdAt DateTime @default(now())
@@ -138,7 +139,7 @@ model Campaign {
   notifications    Notification[]
   datePolls        DatePoll[]
   safetyEntries    SafetyEntry[]
-  dmPages          DmPage[]
+  notebookPages    NotebookPage[]
 }
 
 model CampaignMember {
@@ -192,7 +193,7 @@ model SessionProposal {
   recurringRule RecurringRule? @relation(fields: [recurringRuleId], references: [id])
   rsvps         Rsvp[]
   datePoll      DatePoll?
-  prepPage      DmPage?
+  prepPage      NotebookPage?
 
   @@index([campaignId, startsAt])
 }
@@ -441,22 +442,30 @@ model UserAvatar {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-/// A page in the DM's notebook: NPCs, locations, plot threads… or, when
-/// sessionProposalId is set, the prep for that session. DM-only, always:
-/// kept in its own table so it's never loaded along with a session or
-/// campaign that players can see.
-model DmPage {
+/// A notebook page. ownerId decides whose notebook it's in, and nobody
+/// else's queries can reach it:
+///   - null: the campaign DM's notebook (NPCs, places… and, when
+///     sessionProposalId is set, that session's prep);
+///   - a user id: that player's private notebook in this campaign, which
+///     not even the DM can see.
+/// Kept in its own table (still called "DmPage", from when only the DM
+/// had one) so it's never loaded along with data other people receive.
+model NotebookPage {
   id                String   @id @default(cuid())
   campaignId        String
+  ownerId           String?
   title             String
   content           String   @default("") @db.Text
   pinned            Boolean  @default(false)
-  sessionProposalId String?  @unique
+  sessionProposalId String?  @unique // DM notebook only
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt // also the optimistic-concurrency version for edits
 
   campaign        Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  owner           User?            @relation("NotebookPages", fields: [ownerId], references: [id], onDelete: Cascade)
   sessionProposal SessionProposal? @relation(fields: [sessionProposalId], references: [id], onDelete: SetNull)
 
   @@index([campaignId, updatedAt])
+  @@index([campaignId, ownerId])
+  @@map("DmPage")
 }

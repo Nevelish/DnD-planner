@@ -7,7 +7,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 
-import { createDmPage } from "@/lib/actions/dmPages";
+import { createNotebookPage } from "@/lib/actions/notebook";
 import { linkifyWikiLinks, normalizeTitle, wikiTargetFromHref } from "@/lib/wikiLinks";
 
 export type LinkablePage = { id: string; title: string };
@@ -51,7 +51,7 @@ export function NotebookMarkdown({
     formData.set("title", title);
     startTransition(async () => {
       try {
-        const { pageId } = await createDmPage(campaignId, formData);
+        const { pageId } = await createNotebookPage(campaignId, formData);
         toast.success(`Created "${title}".`);
         router.push(`${pageHref(pageId)}&edit=1`);
       } catch (e) {

@@ -12,7 +12,7 @@ function Code({ children }: { children: React.ReactNode }) {
 /** A "?" next to the notebook editor explaining [[links]]. Opens on hover
  * with a mouse, and on tap or Enter everywhere else. It never takes focus
  * from the editor, so hovering mid-sentence doesn't interrupt typing. */
-export function LinkingHelp() {
+export function LinkingHelp({ kind = "dm" }: { kind?: "dm" | "player" }) {
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<number | undefined>(undefined);
   const lastPointer = useRef<string>("");
@@ -87,7 +87,10 @@ export function LinkingHelp() {
             with a button to link them.
           </li>
           <li>Renaming a page updates the links to it.</li>
-          <li>Session prep can link to pages, but can&apos;t be linked to itself.</li>
+          {kind === "dm" && (
+            <li>Session prep can link to pages, but can&apos;t be linked to itself.</li>
+          )}
+          {kind === "player" && <li>Links only reach pages in your own notebook.</li>}
         </ul>
         <p className="mt-3 border-t pt-2 text-xs text-muted-foreground">
           Formatting: <Code>**bold**</Code> <Code>*italic*</Code> <Code>## Heading</Code>{" "}
