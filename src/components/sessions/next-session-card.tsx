@@ -13,13 +13,17 @@ import { RsvpList } from "@/components/sessions/rsvp-list";
 import { ProposeSessionDialog } from "@/components/sessions/propose-session-dialog";
 import { ConfirmProposalButton } from "@/components/sessions/confirm-proposal-button";
 import { CancelProposalButton } from "@/components/sessions/cancel-proposal-button";
-import type { RsvpStatus, SessionProposalStatus } from "@prisma/client";
+import { SessionPlace } from "@/components/sessions/session-place";
+import type { RsvpStatus, SessionFormat, SessionProposalStatus } from "@prisma/client";
 
 type Proposal = {
   id: string;
   title: string | null;
   startsAt: Date;
   durationMinutes: number | null;
+  format: SessionFormat | null;
+  location: string | null;
+  description: string | null;
   status: SessionProposalStatus;
   rsvps: {
     id: string;
@@ -35,12 +39,15 @@ export function NextSessionCard({
   currentMemberId,
   isDM,
   prefs,
+  lastPlace,
 }: {
   campaignId: string;
   proposal: Proposal;
   currentMemberId: string;
   isDM: boolean;
   prefs: DateTimePrefs;
+  /** Pre-fills the create dialog when there's no upcoming session. */
+  lastPlace?: { format: SessionFormat | null; location: string | null };
 }) {
   if (!proposal) {
     return (
@@ -51,7 +58,7 @@ export function NextSessionCard({
         </CardHeader>
         {isDM && (
           <CardContent className="pb-6">
-            <ProposeSessionDialog campaignId={campaignId} mode="create" />
+            <ProposeSessionDialog campaignId={campaignId} mode="create" defaultValues={lastPlace} />
           </CardContent>
         )}
       </Card>
@@ -79,6 +86,12 @@ export function NextSessionCard({
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 pb-6">
+        <SessionPlace
+          format={proposal.format}
+          location={proposal.location}
+          description={proposal.description}
+        />
+
         {!isDM && (
           <RsvpButtonGroup
             campaignId={campaignId}

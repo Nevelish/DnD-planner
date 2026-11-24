@@ -1,3 +1,5 @@
+import type { SessionFormat } from "@prisma/client";
+
 import {
   Card,
   CardContent,
@@ -14,7 +16,15 @@ export function DraftProposalCard({
   prefs,
 }: {
   campaignId: string;
-  proposal: { id: string; title: string | null; startsAt: Date; durationMinutes: number | null };
+  proposal: {
+    id: string;
+    title: string | null;
+    startsAt: Date;
+    durationMinutes: number | null;
+    format: SessionFormat | null;
+    location: string | null;
+    description: string | null;
+  };
   prefs: DateTimePrefs;
 }) {
   return (

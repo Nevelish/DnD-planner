@@ -3,6 +3,7 @@ import { addWeeks, isBefore } from "date-fns";
 import { toZonedTime, fromZonedTime } from "date-fns-tz";
 
 import { prisma } from "@/lib/prisma";
+import { getLastSessionPlace } from "@/lib/lastSessionPlace";
 import { createNotification } from "@/lib/notifications";
 
 // Matches ProposeSessionDialog's own default, used when there's no prior
@@ -81,6 +82,7 @@ export async function ensureUpcomingProposals(campaignId: string) {
       proposedById: rule.campaign.ownerId,
       startsAt: nextOccurrence,
       durationMinutes: lastProposal?.durationMinutes ?? DEFAULT_DURATION_MINUTES,
+      ...(await getLastSessionPlace(campaignId)),
       status: "DRAFT",
       recurringRuleId: rule.id,
     },

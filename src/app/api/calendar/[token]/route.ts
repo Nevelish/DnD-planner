@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { buildICSFeed, type ICSEvent } from "@/lib/ics";
+import { describePlace } from "@/lib/sessionPlace";
 
 export async function GET(
   request: NextRequest,
@@ -48,6 +49,10 @@ export async function GET(
       endsAt,
       status: p.status === "PROPOSED" ? "TENTATIVE" : "CONFIRMED",
       url: `${origin}/campaigns/${p.campaignId}/sessions/${p.id}`,
+      // e.g. "Online: https://discord.gg/…" — calendar apps show this as
+      // the event's location, and most make a link in it tappable.
+      location: describePlace(p.format, p.location) ?? undefined,
+      description: p.description ?? undefined,
       // A phone/desktop nudge an hour out, on top of the in-app and
       // Discord reminder the day before. Pointless once a session is over.
       alarmMinutesBefore: p.status === "COMPLETED" ? undefined : 60,

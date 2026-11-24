@@ -40,7 +40,7 @@ export const DISCORD_WEBHOOK_EVENT_LABELS: Record<
   string
 > = {
   SESSION_PROPOSED: "New session proposed",
-  SESSION_RESCHEDULED: "Session time changed",
+  SESSION_RESCHEDULED: "Session time or location changed",
   SESSION_CONFIRMED: "Session confirmed",
   SESSION_CANCELLED: "Session cancelled",
   SESSION_REMINDER: "Reminder 24 hours before",

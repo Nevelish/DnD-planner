@@ -14,6 +14,8 @@ import { ProposeSessionDialog } from "@/components/sessions/propose-session-dial
 import { CreatePollDialog } from "@/components/polls/create-poll-dialog";
 import { OpenPollCard } from "@/components/polls/open-poll-card";
 import { getOpenPolls } from "@/lib/openPolls";
+import { getLastSessionPlace } from "@/lib/lastSessionPlace";
+import { SESSION_FORMAT_LABELS } from "@/lib/sessionPlace";
 
 const statusVariant = {
   DRAFT: "secondary",
@@ -34,13 +36,14 @@ export default async function SessionsPage({
 
   await completePastSessions([campaignId]);
 
-  const [proposals, prefs, { polls, playerCount }] = await Promise.all([
+  const [proposals, prefs, { polls, playerCount }, lastPlace] = await Promise.all([
     prisma.sessionProposal.findMany({
       where: { campaignId, status: isDM ? undefined : { not: "DRAFT" } },
       orderBy: { startsAt: "desc" },
     }),
     getDateTimePrefs(userId),
     getOpenPolls(campaignId),
+    isDM ? getLastSessionPlace(campaignId) : undefined,
   ]);
 
   return (
@@ -50,7 +53,7 @@ export default async function SessionsPage({
         {isDM && (
           <div className="flex flex-wrap gap-2">
             <CreatePollDialog campaignId={campaignId} />
-            <ProposeSessionDialog campaignId={campaignId} mode="create" />
+            <ProposeSessionDialog campaignId={campaignId} mode="create" defaultValues={lastPlace} />
           </div>
         )}
       </div>
@@ -80,6 +83,7 @@ export default async function SessionsPage({
                     </CardTitle>
                     <CardDescription>
                       {formatSessionDateTimeForUser(p.startsAt, prefs)}
+                      {p.format ? ` · ${SESSION_FORMAT_LABELS[p.format]}` : ""}
                     </CardDescription>
                   </div>
                   <Badge variant={statusVariant[p.status]}>{p.status}</Badge>
