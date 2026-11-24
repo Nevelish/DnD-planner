@@ -8,10 +8,13 @@ import { rsvpSchema } from "@/lib/validations/session";
 import { notifyCampaignMembers } from "@/lib/notifications";
 import { formatSessionDateTime } from "@/lib/sessionDateFormat";
 
+const RSVP_LABEL = { YES: "Yes", MAYBE: "Maybe", NO: "No" } as const;
+const RSVP_COLOR = { YES: 0x57a64a, MAYBE: 0xe0a33a, NO: 0xd9534f } as const;
+
 export async function respond(
   campaignId: string,
   proposalId: string,
-  status: "YES" | "NO",
+  status: "YES" | "MAYBE" | "NO",
   reason?: string,
 ) {
   const membership = await requireMember(campaignId);
@@ -73,15 +76,19 @@ export async function respond(
   });
 
   const playerName = user.name ?? user.email;
+  const newStatus = parsed.data.status;
+  const title = isCancellation
+    ? `${playerName} can no longer make it`
+    : existing?.status === "YES" && newStatus === "MAYBE"
+      ? `${playerName} might not make it after all`
+      : `${playerName} RSVP'd ${RSVP_LABEL[newStatus]}`;
   await notifyCampaignMembers(campaignId, {
     type: "RSVP_CHANGED",
-    title: isCancellation
-      ? `${playerName} can no longer make it`
-      : `${playerName} RSVP'd ${parsed.data.status === "YES" ? "Yes" : "No"}`,
+    title,
     body: `${await formatSessionDateTime(proposal.startsAt)}${parsed.data.reason ? ` — ${parsed.data.reason}` : ""}`,
     link: `/campaigns/${campaignId}/sessions/${proposalId}`,
     excludeUserId: membership.userId,
-    color: isCancellation || parsed.data.status === "NO" ? 0xd9534f : 0x57a64a,
+    color: RSVP_COLOR[newStatus],
   });
 
   revalidatePath(`/campaigns/${campaignId}/sessions/${proposalId}`);

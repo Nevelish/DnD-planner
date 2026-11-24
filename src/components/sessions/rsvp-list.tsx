@@ -8,14 +8,16 @@ type RsvpRow = {
   member: { user: { id: string; name: string | null; email: string | null } };
 };
 
-const statusVariant: Record<RsvpStatus, "success" | "destructive" | "secondary"> = {
+const statusVariant: Record<RsvpStatus, "success" | "warning" | "destructive" | "secondary"> = {
   YES: "success",
+  MAYBE: "warning",
   NO: "destructive",
   PENDING: "secondary",
 };
 
 const statusLabel: Record<RsvpStatus, string> = {
   YES: "Going",
+  MAYBE: "Maybe",
   NO: "Can't make it",
   PENDING: "No response yet",
 };

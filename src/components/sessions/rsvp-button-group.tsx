@@ -2,12 +2,18 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { CheckIcon, XIcon } from "lucide-react";
+import { CheckIcon, CircleHelpIcon, XIcon } from "lucide-react";
 
 import { respond } from "@/lib/actions/rsvp";
 import { Button } from "@/components/ui/button";
 import { CancelReasonDialog } from "@/components/sessions/cancel-reason-dialog";
 import type { RsvpStatus } from "@prisma/client";
+
+const SUCCESS_MESSAGE = {
+  YES: "You're in!",
+  MAYBE: "Marked as maybe.",
+  NO: "Marked as not attending.",
+} as const;
 
 export function RsvpButtonGroup({
   campaignId,
@@ -21,12 +27,12 @@ export function RsvpButtonGroup({
   const [isPending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  function submit(status: "YES" | "NO", reason?: string) {
+  function submit(status: "YES" | "MAYBE" | "NO", reason?: string) {
     startTransition(async () => {
       try {
         await respond(campaignId, proposalId, status, reason);
         setDialogOpen(false);
-        toast.success(status === "YES" ? "You're in!" : "Marked as not attending.");
+        toast.success(SUCCESS_MESSAGE[status]);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Something went wrong.");
       }
@@ -51,6 +57,19 @@ export function RsvpButtonGroup({
           onClick={() => submit("YES")}
         >
           <CheckIcon /> Yes, I&apos;m in
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className={
+            currentStatus === "MAYBE"
+              ? "border-transparent bg-amber-700 text-white hover:bg-amber-700/90 hover:text-white"
+              : undefined
+          }
+          disabled={isPending}
+          onClick={() => submit("MAYBE")}
+        >
+          <CircleHelpIcon /> Maybe
         </Button>
         <Button
           size="sm"

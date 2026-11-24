@@ -38,7 +38,7 @@ export const proposalSchema = z
 export type ProposalInput = z.infer<typeof proposalSchema>;
 
 export const rsvpSchema = z.object({
-  status: z.enum(["YES", "NO"]),
+  status: z.enum(["YES", "MAYBE", "NO"]),
   reason: z
     .string()
     .trim()
