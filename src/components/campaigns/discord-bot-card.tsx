@@ -7,18 +7,23 @@ import { ExternalLinkIcon } from "lucide-react";
 import { disconnectDiscordChannel, setDiscordAutoJoin } from "@/lib/actions/discord";
 import { errorMessage } from "@/lib/userError";
 import { Button } from "@/components/ui/button";
+import { ConnectDiscordButton } from "@/components/account/connect-discord-button";
 
 export function DiscordBotCard({
   campaignId,
   channelLabel,
   autoJoin,
   inviteUrl,
+  dmDiscordLinked,
 }: {
   campaignId: string;
   /** "#game-night", or the channel id if Discord didn't say; null if not connected. */
   channelLabel: string | null;
   autoJoin: boolean;
   inviteUrl: string;
+  /** Whether the DM viewing this has a Discord account linked, which
+   * /planner connect needs to know it's them. */
+  dmDiscordLinked: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [autoJoinOn, setAutoJoinOn] = useState(autoJoin);
@@ -42,7 +47,18 @@ export function DiscordBotCard({
           <span className="font-medium text-foreground">I&apos;m in / Maybe / Can&apos;t make it</span>{" "}
           buttons, and keeps the answers on the post up to date.
         </p>
-        <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
+        <ol className="list-decimal space-y-2 pl-5 text-muted-foreground">
+          {!dmDiscordLinked && (
+            <li>
+              <span className="flex flex-col gap-2">
+                <span>
+                  Connect your Discord account, so the bot knows it&apos;s you. You keep signing
+                  in the way you do now, and it doesn&apos;t matter if the email addresses differ.
+                </span>
+                <ConnectDiscordButton callbackUrl={`/campaigns/${campaignId}/settings`} />
+              </span>
+            </li>
+          )}
           <li>
             <a href={inviteUrl} target="_blank" rel="noreferrer" className="font-medium text-foreground underline underline-offset-2">
               Add the bot to your server
@@ -51,7 +67,7 @@ export function DiscordBotCard({
           </li>
           <li>
             In the channel you want, type <code className="rounded bg-muted px-1">/planner connect</code> and pick
-            this campaign. You need to have signed in here with Discord.
+            this campaign.
           </li>
         </ol>
       </div>

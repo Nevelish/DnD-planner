@@ -132,7 +132,8 @@ async function connectCommand(interaction: Interaction) {
   const memberships = await dmCampaignsOf(discordUserOf(interaction).id);
   if (memberships === null) {
     return privately(
-      "I don't know who you are on the planner yet. Sign in there with Discord (or connect Discord on your account page), then try again.",
+      "I don't know who you are on the planner yet. Open your Account page there and click **Connect Discord** " +
+        "(you can keep signing in with your email), then try again.",
       [linkButton("Open the planner", `${await getRequestOrigin()}/account`)],
     );
   }

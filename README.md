@@ -258,8 +258,10 @@ internet, so the planner must be reachable at a public `https://` address
 4. As the DM, open the campaign's **Settings** on the planner and use
    **Add the bot to your server**.
 5. In the Discord channel you want, type `/planner connect` and pick the
-   campaign. You need to have signed in to the planner with Discord (or
-   connected Discord on your account page) so the bot knows you're the DM.
+   campaign. The bot needs to know you're the DM, so your planner account must
+   be linked to Discord: either you sign in with Discord, or you click
+   **Connect Discord** (on your Account page, or in the campaign's settings)
+   and keep signing in with email. The two email addresses don't have to match.
 
 From then on that campaign's posts come from the bot instead of the webhook,
 using the same event choices, and session posts get RSVP buttons. Players

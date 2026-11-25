@@ -64,6 +64,18 @@ test.afterAll(async () => {
   await discord?.close();
 });
 
+test("the settings show a DM without a linked Discord account how to link it", async () => {
+  sql(`DELETE FROM "Account" WHERE "providerAccountId" = '${DM_DISCORD}'`);
+  await go(dm, `/campaigns/${cid}/settings`);
+  await expect(dm.getByText("Connect your Discord account, so the bot knows it's you.")).toBeVisible();
+  await expect(dm.getByRole("button", { name: "Connect Discord" })).toBeVisible();
+
+  linkDiscord(DM, DM_DISCORD);
+  await dm.reload({ waitUntil: "networkidle" });
+  await expect(dm.getByText("type /planner connect and pick this campaign")).toBeVisible();
+  await expect(dm.getByRole("button", { name: "Connect Discord" })).toHaveCount(0);
+});
+
 test("only requests signed by Discord are accepted", async ({ request }) => {
   expect((await interact(request, { type: 1 }, { signed: false })).status).toBe(401);
   const unsigned = await request.post(`${BASE_URL}/api/discord/interactions`, { data: { type: 1 } });
@@ -73,7 +85,9 @@ test("only requests signed by Discord are accepted", async ({ request }) => {
 });
 
 test("only the campaign's DM can connect it to a channel", async ({ request }) => {
-  expect(reply((await interact(request, connectCommand(STRANGER_DISCORD))).json).content).toContain("I don't know who you are");
+  const stranger = reply((await interact(request, connectCommand(STRANGER_DISCORD))).json);
+  expect(stranger.content).toContain("I don't know who you are");
+  expect(stranger.content).toContain("click **Connect Discord**");
   expect(reply((await interact(request, connectCommand(P1_DISCORD))).json).content).toContain("you're not the DM of any campaign");
 
   const offer = (await interact(request, connectCommand(DM_DISCORD))).json;
