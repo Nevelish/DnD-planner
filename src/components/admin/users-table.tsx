@@ -93,7 +93,12 @@ export function UsersTable({
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" disabled={isPending}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={isPending}
+                      aria-label={`Actions for ${user.name ?? user.email}`}
+                    >
                       <MoreVerticalIcon />
                     </Button>
                   </DropdownMenuTrigger>

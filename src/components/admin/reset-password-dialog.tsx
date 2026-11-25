@@ -33,7 +33,7 @@ export function ResetPasswordDialog({
     startTransition(async () => {
       try {
         await adminResetPassword(user.id, password);
-        toast.success(`Password updated for ${user.name ?? user.email}.`);
+        toast.success(`Password updated for ${user.name ?? user.email}, and they were signed out everywhere.`);
         setPassword("");
         onOpenChange(false);
       } catch (e) {

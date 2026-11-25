@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { changePasswordAction, type ActionResult } from "@/lib/actions/auth";
@@ -16,16 +17,24 @@ export function ChangePasswordForm() {
     initialState,
   );
 
+  // A successful change redirects back here with ?password=changed (see
+  // changePasswordAction); say so once, then tidy the URL.
+  const router = useRouter();
+  const pathname = usePathname();
+  const changed = useSearchParams().get("password") === "changed";
   useEffect(() => {
-    if (state.success) {
-      toast.success("Password updated.");
-    }
-  }, [state.success]);
+    if (!changed) return;
+    // A fixed id, so it shows once even if this effect runs twice.
+    toast.success("Password updated. Any other devices signed in to your account have been signed out.", {
+      id: "password-changed",
+    });
+    router.replace(pathname);
+  }, [changed, pathname, router]);
 
   return (
     <form
       action={formAction}
-      key={state.success ? "reset" : "form"}
+      key={changed ? "reset" : "form"}
       className="flex flex-col gap-4"
     >
       <div className="flex flex-col gap-1.5">
