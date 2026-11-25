@@ -7,6 +7,7 @@ import { DiscordWebhookForm } from "@/components/campaigns/discord-webhook-form"
 import { RecurringRuleForm } from "@/components/sessions/recurring-rule-form";
 import { DiscordBotCard } from "@/components/campaigns/discord-bot-card";
 import { discordApi, discordBotConfig } from "@/lib/discord/api";
+import { linkedDiscordId } from "@/lib/discord/accounts";
 
 // Read Messages, Send Messages, Embed Links, Read Message History.
 const BOT_PERMISSIONS = 1024 + 2048 + 16384 + 65536;
@@ -17,7 +18,7 @@ export default async function CampaignSettingsPage({
   params: Promise<{ campaignId: string }>;
 }) {
   const { campaignId } = await params;
-  await requireDMForPage(campaignId);
+  const { userId } = await requireDMForPage(campaignId);
 
   const [campaign, recurringRule] = await Promise.all([
     prisma.campaign.findUniqueOrThrow({ where: { id: campaignId } }),
@@ -37,6 +38,7 @@ export default async function CampaignSettingsPage({
       : `channel ${campaign.discordChannelId}`
     : null;
   const botConnected = !!bot && !!campaign.discordChannelId;
+  const dmDiscordLinked = bot ? (await linkedDiscordId(userId)) !== null : false;
 
   return (
     <div className="flex flex-col gap-6">
@@ -72,6 +74,7 @@ export default async function CampaignSettingsPage({
               campaignId={campaignId}
               channelLabel={channelLabel}
               autoJoin={campaign.discordAutoJoin}
+              dmDiscordLinked={dmDiscordLinked}
               inviteUrl={`https://discord.com/oauth2/authorize?client_id=${bot.applicationId}&scope=bot+applications.commands&permissions=${BOT_PERMISSIONS}`}
             />
           </CardContent>
@@ -84,7 +87,8 @@ export default async function CampaignSettingsPage({
           {botConnected && (
             <CardDescription>
               The Discord bot is posting for this campaign, so the webhook URL isn&apos;t used. The
-              events you pick here still decide what gets posted.
+              events you pick here still decide what gets posted. Session posts show everyone&apos;s
+              answers themselves, and updates to a session are posted as replies to it.
             </CardDescription>
           )}
         </CardHeader>
