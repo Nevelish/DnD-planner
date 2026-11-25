@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { DISCORD_TEST_APP_ID, DISCORD_TEST_PUBLIC_KEY, FAKE_DISCORD_PORT } from "./e2e/discord";
+
 /**
  * End-to-end tests: a production build of the app against a real Postgres
  * database. See e2e/README.md for how to run them.
@@ -47,6 +49,11 @@ export default defineConfig({
       NEXTAUTH_URL: E2E_BASE_URL,
       NEXTAUTH_SECRET: "e2e-test-secret-not-for-production",
       TZ: "Europe/Oslo",
+      // The Discord bot, talking to a fake Discord the tests run (e2e/discord.ts).
+      DISCORD_CLIENT_ID: DISCORD_TEST_APP_ID,
+      DISCORD_PUBLIC_KEY: DISCORD_TEST_PUBLIC_KEY,
+      DISCORD_BOT_TOKEN: "test-bot-token",
+      DISCORD_API_BASE: `http://127.0.0.1:${FAKE_DISCORD_PORT}/api`,
     },
   },
 });

@@ -63,6 +63,12 @@ import, and in-app notifications.
   each session, to the DM and everyone who hasn't said No, plus a
   calendar-app alert an hour before via the .ics feed. Set `TZ` (e.g.
   `Europe/Oslo`) so reminder times read in your group's timezone.
+- **RSVP from Discord** (optional bot): session posts in your Discord
+  channel get **I'm in / Maybe / Can't make it** buttons, and the answers on
+  the post stay up to date. Backing out after a Yes asks for a reason in a
+  pop-up. Someone who isn't in the campaign yet gets a link to join once
+  with their Discord account; or the DM can let anyone in the channel join
+  just by answering. See [Discord bot](#discord-bot) below to set it up.
 - **Notification settings**: each person picks which events show up in
   their bell and which ones @mention them on Discord (e.g. keep reminders,
   skip every RSVP change). Everything is on until you switch it off.
@@ -225,7 +231,41 @@ browser saw.
 See `.env.example`. `DATABASE_URL`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL` are
 required. `DISCORD_CLIENT_ID`/`DISCORD_CLIENT_SECRET` are optional — leave
 them blank to ship with email/password only; the "Continue with Discord"
-button is hidden until both are set.
+button is hidden until both are set. `DISCORD_BOT_TOKEN` and
+`DISCORD_PUBLIC_KEY` switch on the Discord bot (below).
+
+## Discord bot
+
+Optional. It uses the same Discord application as "Continue with Discord", so
+set that up first. Discord sends button clicks to the planner over the
+internet, so the planner must be reachable at a public `https://` address
+(the same one Discord sign-in already redirects back to).
+
+1. In the [Discord developer portal](https://discord.com/developers/applications),
+   open your application.
+   - **General Information**: copy the **Public Key** into
+     `DISCORD_PUBLIC_KEY`.
+   - **Bot**: click **Reset Token** and copy the token into
+     `DISCORD_BOT_TOKEN`. Keep it secret: it lets anyone post as your bot.
+     No privileged intents are needed.
+2. Restart the app with the two new variables (on TrueNAS, add them to the
+   app's environment). On start it registers the `/planner` command with
+   Discord.
+3. Back in the portal, under **General Information**, set **Interactions
+   Endpoint URL** to `https://<your planner address>/api/discord/interactions`
+   and save. Discord checks the address straight away, so the app must be
+   running with the new variables first.
+4. As the DM, open the campaign's **Settings** on the planner and use
+   **Add the bot to your server**.
+5. In the Discord channel you want, type `/planner connect` and pick the
+   campaign. You need to have signed in to the planner with Discord (or
+   connected Discord on your account page) so the bot knows you're the DM.
+
+From then on that campaign's posts come from the bot instead of the webhook,
+using the same event choices, and session posts get RSVP buttons. Players
+whose planner account is linked to Discord can answer right away. Anyone else
+gets a private link to join with their Discord account once, unless the DM
+turns on **Let anyone in the channel join by answering** in Settings.
 
 ## Notes on the D&D Beyond integration
 
