@@ -11,9 +11,13 @@ import {
   linkMention,
   normalizeTitle,
   renameWikiLinks,
+  unlinkWikiLinks,
   wikiLinkTargets,
 } from "@/lib/wikiLinks";
 import { UserError } from "@/lib/userError";
+import { sharePicturesWithParty } from "@/lib/notebookImages";
+import { notifyCampaignMembers } from "@/lib/notifications";
+import { recapExcerpt } from "@/lib/recap";
 
 const MAX_CONTENT_LENGTH = 100_000;
 const MAX_PAGES_PER_NOTEBOOK = 500;
@@ -291,4 +295,83 @@ export async function ensureSessionPrep(campaignId: string, proposalId: string) 
 
   revalidateNotebook(campaignId, proposalId);
   return { id: page.id, content: page.content, updatedAt: page.updatedAt.toISOString() };
+}
+
+/**
+ * The DM shares a page from their notebook with the party: a copy goes into
+ * the party notebook, with the text the DM reviewed (secrets taken out), and
+ * the DM's own page stays as it was. Links to pages the party can't see can
+ * be turned into plain text, so their titles don't leak; pictures are copied
+ * so players can see them. Revealing the same page again updates the
+ * party's copy rather than making another.
+ */
+export async function revealNotebookPage(campaignId: string, pageId: string, formData: FormData) {
+  const dm = await requireDM(campaignId);
+  const page = await prisma.notebookPage.findFirst({
+    where: { id: pageId, campaignId, kind: "DM", ownerId: null, sessionProposalId: null },
+    select: { id: true, revealedAs: { select: { id: true } } },
+  });
+  if (!page) {
+    throw new UserError("Only pages in your DM notebook can be revealed (not session prep).");
+  }
+
+  const title = titleSchema.safeParse(formData.get("title"));
+  if (!title.success) {
+    throw new UserError(title.error.issues[0]?.message ?? "Give the page a title.");
+  }
+  let content = String(formData.get("content") ?? "").replace(/\r\n?/g, "\n");
+  if (content.length > MAX_CONTENT_LENGTH) {
+    throw new UserError("That page is too long.");
+  }
+  const existingId = page.revealedAs?.id;
+
+  if (formData.get("unlinkHidden") === "on") {
+    const partyPages = await prisma.notebookPage.findMany({
+      where: { campaignId, kind: "PARTY", ...(existingId ? { id: { not: existingId } } : {}) },
+      select: { title: true },
+    });
+    const visible = new Set([...partyPages.map((p) => normalizeTitle(p.title)), normalizeTitle(title.data)]);
+    content = unlinkWikiLinks(content, visible);
+  }
+  content = await sharePicturesWithParty(campaignId, content);
+
+  if (!existingId) {
+    const count = await prisma.notebookPage.count({ where: { campaignId, kind: "PARTY" } });
+    if (count >= MAX_PAGES_PER_NOTEBOOK) {
+      throw new UserError("The party notebook is full. Delete some old pages first.");
+    }
+  }
+  // The same moment for both, so any later edit by the players shows as one.
+  const now = new Date();
+  const partyPage = existingId
+    ? await prisma.notebookPage.update({
+        where: { id: existingId },
+        data: { title: title.data, content, revealedAt: now, updatedAt: now },
+        select: { id: true },
+      })
+    : await prisma.notebookPage.create({
+        data: {
+          campaignId,
+          kind: "PARTY",
+          createdById: dm.userId,
+          title: title.data,
+          content,
+          revealedFromId: page.id,
+          revealedAt: now,
+          updatedAt: now,
+        },
+        select: { id: true },
+      });
+
+  await notifyCampaignMembers(campaignId, {
+    type: "PAGE_REVEALED",
+    title: existingId ? `The DM updated “${title.data}”` : `The DM revealed “${title.data}”`,
+    body: recapExcerpt(content) || undefined,
+    link: `/campaigns/${campaignId}/notes/party?page=${partyPage.id}`,
+    excludeUserId: dm.userId,
+  });
+
+  revalidatePath(`/campaigns/${campaignId}/notes`);
+  revalidatePath(`/campaigns/${campaignId}/notes/party`);
+  return { partyPageId: partyPage.id, updated: !!existingId };
 }

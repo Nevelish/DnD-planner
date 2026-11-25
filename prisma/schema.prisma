@@ -130,7 +130,7 @@ model Campaign {
   inviteCode           String             @unique
   discordWebhookUrl    String? // posts campaign notifications (session proposed/cancelled, RSVP, etc.) to Discord
   sessionZero          Json? // the DM's Session Zero answers: { [questionKey]: answer }, see src/lib/sessionZero.ts
-  discordWebhookEvents NotificationType[] @default([SESSION_PROPOSED, SESSION_RESCHEDULED, SESSION_CONFIRMED, SESSION_CANCELLED, SESSION_REMINDER, DATE_POLL_OPENED, RECAP_POSTED, RSVP_CHANGED, MEMBER_JOINED, MEMBER_LEFT, RECURRING_DRAFT_READY]) // which event types actually post to discordWebhookUrl
+  discordWebhookEvents NotificationType[] @default([SESSION_PROPOSED, SESSION_RESCHEDULED, SESSION_CONFIRMED, SESSION_CANCELLED, SESSION_REMINDER, DATE_POLL_OPENED, RECAP_POSTED, RSVP_CHANGED, MEMBER_JOINED, MEMBER_LEFT, RECURRING_DRAFT_READY, PAGE_REVEALED]) // which event types actually post to discordWebhookUrl
   discordChannelId     String? // channel the Discord bot posts to, with RSVP buttons (set with /planner connect); takes over from the webhook
   discordAutoJoin      Boolean            @default(false) // an RSVP button click from someone without an account creates one and adds them as a player
   createdAt            DateTime           @default(now())
@@ -402,6 +402,7 @@ enum NotificationType {
   RECAP_POSTED
   SAFETY_TOOL_ADDED
   DATE_POLL_OPENED
+  PAGE_REVEALED // the DM shared a page from their notebook with the party
 }
 
 model Notification {
@@ -473,6 +474,8 @@ model NotebookPage {
   content           String       @default("") @db.Text
   pinned            Boolean      @default(false)
   sessionProposalId String?      @unique // DM notebook only: that session's prep
+  revealedFromId    String?      @unique // PARTY only: the DM page this was revealed from ("Reveal to party")
+  revealedAt        DateTime? // when the DM last revealed (or re-revealed) it
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt // also the optimistic-concurrency version for edits
 
@@ -480,6 +483,8 @@ model NotebookPage {
   owner           User?            @relation("NotebookPages", fields: [ownerId], references: [id], onDelete: Cascade)
   createdBy       User?            @relation("NotebookPagesCreated", fields: [createdById], references: [id], onDelete: SetNull)
   sessionProposal SessionProposal? @relation(fields: [sessionProposalId], references: [id], onDelete: SetNull)
+  revealedFrom    NotebookPage?    @relation("Reveal", fields: [revealedFromId], references: [id], onDelete: SetNull)
+  revealedAs      NotebookPage?    @relation("Reveal")
 
   @@index([campaignId, updatedAt])
   @@index([campaignId, kind, ownerId])

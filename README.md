@@ -91,6 +91,14 @@ import, and in-app notifications.
   notebooks with the pages that use it, shows how much of the campaign's
   500 MB is used, and can delete pictures one at a time or all unused ones
   at once. Players' private pictures only show there as a total.
+- **Reveal to party**: when the players discover something, the DM can
+  reveal a page from the DM notebook. A copy goes into the party notebook,
+  and the DM's page stays as it is. The DM reviews the text first and can
+  take secrets out. Links to pages the party can't see become plain text,
+  so those titles don't leak, and pictures on the page are shared with the
+  party while the DM's own stay private. Everyone is notified (and it's
+  posted to Discord). Revealing again later updates the party's copy, with
+  a warning if the players have edited it since.
 - **Profile pictures**: optional; upload one under Account and it shows next
   to your name in the nav, member lists and RSVPs. Discord sign-ins use
   the Discord picture until you upload your own; otherwise initials. Photos

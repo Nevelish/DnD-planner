@@ -124,7 +124,14 @@ export async function loadNotebook({
   if (!search && selectedId) {
     const page = await prisma.notebookPage.findFirst({
       where: { ...scope, id: selectedId },
-      select: { ...select, content: true, createdById: true },
+      select: {
+        ...select,
+        content: true,
+        createdById: true,
+        revealedAt: true,
+        // Only ever set on DM pages, which only the DM loads.
+        revealedAs: { select: { id: true, title: true, updatedAt: true, revealedAt: true } },
+      },
     });
     if (page) {
       const key = normalizeTitle(page.title);
@@ -151,6 +158,18 @@ export async function loadNotebook({
         content: page.content,
         updatedAt: page.updatedAt.toISOString(),
         startInEdit,
+        reveal:
+          scope.kind === "DM" && page.revealedAs?.revealedAt
+            ? {
+                partyPageId: page.revealedAs.id,
+                partyTitle: page.revealedAs.title,
+                revealedOn: formatDateOnlyForUser(page.revealedAs.revealedAt, prefs),
+                // Players' own edits (or ticks) since the last reveal.
+                editedSince: page.revealedAs.updatedAt.getTime() > page.revealedAs.revealedAt.getTime(),
+              }
+            : null,
+        revealedOn:
+          scope.kind === "PARTY" && page.revealedAt ? formatDateOnlyForUser(page.revealedAt, prefs) : null,
         // Shared party pages can only be deleted by their author or the DM.
         canDelete: scope.kind !== "PARTY" || viewer.isDM || page.createdById === viewer.userId,
         backlinks: linking.map((p) => ({

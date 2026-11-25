@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/prisma";
 import { requireMembershipForPage } from "@/lib/permissions";
 import { getDateTimePrefs } from "@/lib/sessionDateFormat";
 import { loadNotebook, notebookScope } from "@/lib/notebookData";
@@ -25,6 +26,12 @@ export default async function MyNotebookPage({
     rawQuery: q,
     startInEdit: edit === "1",
   });
+  // For "Reveal to party": which links would point at pages the party has.
+  const partyTitles = viewer.isDM
+    ? (await prisma.notebookPage.findMany({ where: { campaignId, kind: "PARTY" }, select: { title: true } })).map(
+        (p) => p.title,
+      )
+    : undefined;
 
   return (
     <Card>
@@ -45,6 +52,7 @@ export default async function MyNotebookPage({
           selected={notebook.selected}
           search={notebook.search}
           linkablePages={notebook.linkablePages}
+          partyTitles={partyTitles}
         />
       </CardContent>
     </Card>

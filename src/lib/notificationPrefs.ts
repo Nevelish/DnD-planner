@@ -28,6 +28,7 @@ export const NOTIFICATION_PREF_GROUPS: { heading: string; items: PrefItem[] }[] 
       { type: "SESSION_CANCELLED", label: "Session cancelled" },
       { type: "SESSION_REMINDER", label: "Reminder the day before" },
       { type: "RECAP_POSTED", label: "Session recap posted" },
+      { type: "PAGE_REVEALED", label: "The DM reveals a page to the party" },
       { type: "RSVP_CHANGED", label: "Someone's RSVP changes" },
       { type: "SAFETY_TOOL_ADDED", label: "A line or veil is added" },
     ],
