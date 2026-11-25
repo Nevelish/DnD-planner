@@ -550,6 +550,7 @@ model NotebookImage {
   data         Bytes
   width        Int
   height       Int
+  size         Int // bytes stored, so totals don't need to read the images
   createdAt    DateTime     @default(now())
 
   campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)

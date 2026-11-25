@@ -8,6 +8,7 @@ CREATE TABLE "NotebookImage" (
     "data" BYTEA NOT NULL,
     "width" INTEGER NOT NULL,
     "height" INTEGER NOT NULL,
+    "size" INTEGER NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "NotebookImage_pkey" PRIMARY KEY ("id")

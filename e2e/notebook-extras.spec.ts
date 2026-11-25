@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import sharp from "sharp";
 
 import {
-  BASE_URL, DM, PLAYER1, PLAYER2, campaignId, go, login, resetDatabase, sql,
+  BASE_URL, DM, PLAYER1, PLAYER2, campaignId, fetchHtml, go, login, resetDatabase, sql, tamper,
 } from "./support";
 
 /** Checklists you can tick in a page's readable view, and pictures in
@@ -93,8 +93,9 @@ test.describe("checklists", () => {
   });
 });
 
+let dmImage: string, p1Image: string, partyImage: string;
+
 test.describe("pictures", () => {
-  let dmImage: string, p1Image: string, partyImage: string;
 
   /** A camera photo: big, and with metadata that mustn't survive. */
   const photo = () =>
@@ -181,5 +182,78 @@ test.describe("pictures", () => {
       multipart: { campaignId: "othercampaign", notebook: "party", image: { name: "x.jpg", mimeType: "image/jpeg", buffer: await photo() } },
     });
     expect(elsewhere.status()).toBe(403);
+  });
+});
+
+test.describe("the DM's Pictures page", () => {
+  let unusedImage: string, privatelyUsedImage: string;
+  const pictures = () => `${notes}/pictures`;
+  const card = (page: Page, url: string) =>
+    page.getByRole("list", { name: "Pictures" }).getByRole("listitem").filter({ has: page.locator(`img[src="${url}"]`) });
+
+  async function upload(page: Page, notebook: "mine" | "party") {
+    const buffer = await sharp({ create: { width: 400, height: 300, channels: 3, background: "#48c" } }).png().toBuffer();
+    const response = await page.context().request.post("/api/notebook-images", {
+      multipart: { campaignId: cid, notebook, image: { name: "x.png", mimeType: "image/png", buffer } },
+    });
+    return (await response.json()).url as string;
+  }
+
+  test.beforeAll(async () => {
+    unusedImage = await upload(dm, "mine"); // never put on a page
+    // A party picture only used in player 1's private notes.
+    privatelyUsedImage = await upload(p2, "party");
+    sql(`UPDATE "DmPage" SET content = content || E'\\n![copy](${privatelyUsedImage})' WHERE title = 'Suspects'`);
+  });
+
+  test("lists the DM's and party pictures, and what uses them", async () => {
+    await go(dm, pictures());
+    await expect(dm.getByRole("navigation", { name: "Notebooks" }).getByRole("link", { name: "Pictures" })).toHaveAttribute("aria-current", "page");
+    await expect(dm.getByRole("list", { name: "Pictures" }).getByRole("listitem")).toHaveCount(4);
+
+    await expect(card(dm, dmImage)).toContainText("Used on Campaign notes");
+    await expect(card(dm, partyImage)).toContainText("Used on Shopping list");
+    await expect(card(dm, unusedImage)).toContainText("Not used on any page");
+    await expect(card(dm, privatelyUsedImage)).toContainText("Also used in a player's private notebook.");
+    await expect(card(dm, privatelyUsedImage)).not.toContainText("Not used on any page");
+
+    // Player 1's private picture is only counted, never shown.
+    await expect(card(dm, p1Image)).toHaveCount(0);
+    expect(await fetchHtml(dm, pictures())).not.toContain(p1Image);
+    await expect(dm.getByText("Includes 1 picture")).toBeVisible();
+  });
+
+  test("Delete all unused removes only what no page uses", async () => {
+    await dm.getByRole("button", { name: "Delete all unused" }).click();
+    await expect(dm.getByText("Unused pictures deleted.")).toBeVisible();
+    const id = (url: string) => url.split("/").pop();
+    expect(sql(`SELECT count(*) FROM "NotebookImage" WHERE id = '${id(unusedImage)}'`)).toBe("0");
+    for (const url of [dmImage, partyImage, privatelyUsedImage, p1Image]) {
+      expect(sql(`SELECT count(*) FROM "NotebookImage" WHERE id = '${id(url)}'`), url).toBe("1");
+    }
+  });
+
+  test("the DM can't remove a player's private picture, even with a forged request", async () => {
+    await go(dm, pictures());
+    const own = partyImage.split("/").pop()!;
+    const victim = p1Image.split("/").pop()!;
+    expect(await tamper(dm, own, victim, () => card(dm, partyImage).getByRole("button", { name: /^Delete/ }).click())).toBe(true);
+    await expect(dm.getByText("That picture was already removed.")).toBeVisible();
+    expect(sql(`SELECT count(*) FROM "NotebookImage" WHERE id = '${victim}'`)).toBe("1");
+    expect(sql(`SELECT count(*) FROM "NotebookImage" WHERE id = '${own}'`)).toBe("1");
+  });
+
+  test("deleting a used picture leaves a note on its page", async () => {
+    await go(dm, pictures());
+    await card(dm, dmImage).getByRole("button", { name: /^Delete/ }).click();
+    await expect(dm.getByText("Picture deleted.")).toBeVisible();
+    await go(dm, `${notes}?page=${dmPageId}`);
+    await expect(activePanel(dm).getByText("Picture removed: dungeon map")).toBeVisible();
+  });
+
+  test("players don't get the Pictures page", async () => {
+    await go(p1, notes);
+    await expect(p1.getByRole("navigation", { name: "Notebooks" }).getByRole("link")).toHaveText(["My notebook", "Party notebook"]);
+    expect(await fetchHtml(p1, pictures())).not.toContain(partyImage);
   });
 });

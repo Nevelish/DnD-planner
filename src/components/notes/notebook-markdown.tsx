@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useTransition } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
@@ -12,6 +12,39 @@ import { linkifyWikiLinks, normalizeTitle, wikiTargetFromHref } from "@/lib/wiki
 import { errorMessage } from "@/lib/userError";
 
 export type LinkablePage = { id: string; title: string };
+
+/** A picture in a page, opening full size in a new tab. Shown with a plain
+ * <img>: pictures are private, served by the app's own route to signed-in
+ * viewers, which next/image's optimizer would bypass. */
+function NotebookPicture({ src, alt }: { src: string; alt: string }) {
+  const [missing, setMissing] = useState(false);
+  const ref = useRef<HTMLImageElement>(null);
+  // It may have failed before React was listening (server-rendered pages).
+  useEffect(() => {
+    const img = ref.current;
+    if (img?.complete && img.naturalWidth === 0) setMissing(true);
+  }, []);
+  if (missing) {
+    return (
+      <span className="my-3 block rounded-md border border-dashed p-3 text-center text-sm text-muted-foreground">
+        Picture removed{alt ? `: ${alt}` : ""}
+      </span>
+    );
+  }
+  return (
+    <a href={src} target="_blank" rel="noopener noreferrer" className="my-3 block">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={ref}
+        src={src}
+        alt={alt}
+        loading="lazy"
+        onError={() => setMissing(true)}
+        className="mx-auto my-0 max-h-[36rem] w-auto max-w-full rounded-md border"
+      />
+    </a>
+  );
+}
 
 // The source line of the checklist item being rendered, for its checkbox.
 const TaskLine = createContext<number | null>(null);
@@ -105,22 +138,9 @@ export function NotebookMarkdown({
               </li>
             );
           },
-          // Pictures open full size in a new tab. Shown with a plain <img>:
-          // they're private, served by the app's own route to signed-in
-          // viewers, which next/image's optimizer would bypass.
           img({ src, alt }) {
             if (typeof src !== "string" || !src) return null;
-            return (
-              <a href={src} target="_blank" rel="noopener noreferrer" className="my-3 block">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={src}
-                  alt={alt ?? ""}
-                  loading="lazy"
-                  className="mx-auto my-0 max-h-[36rem] w-auto max-w-full rounded-md border"
-                />
-              </a>
-            );
+            return <NotebookPicture src={src} alt={alt ?? ""} />;
           },
           input({ type, checked }) {
             if (type !== "checkbox") return null;

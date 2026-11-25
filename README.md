@@ -87,6 +87,10 @@ import, and in-app notifications.
   stripped of hidden metadata such as phone GPS location. They're only
   visible to whoever can see the notebook they were added to: DM-notebook
   maps stay with the DM, and party handouts go to everyone in the campaign.
+  The DM's **Notes → Pictures** tab lists every picture in the DM's and party
+  notebooks with the pages that use it, shows how much of the campaign's
+  500 MB is used, and can delete pictures one at a time or all unused ones
+  at once. Players' private pictures only show there as a total.
 - **Profile pictures**: optional; upload one under Account and it shows next
   to your name in the nav, member lists and RSVPs. Discord sign-ins use
   the Discord picture until you upload your own; otherwise initials. Photos

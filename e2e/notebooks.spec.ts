@@ -58,7 +58,7 @@ test("everyone gets the right notebooks", async () => {
   await expect(p1.getByRole("navigation", { name: "Session prep" })).toHaveCount(0);
 
   await go(dm, notes);
-  await expect(dm.getByRole("navigation", { name: "Notebooks" }).getByRole("link")).toHaveText(["DM notebook", "Party notebook"]);
+  await expect(dm.getByRole("navigation", { name: "Notebooks" }).getByRole("link")).toHaveText(["DM notebook", "Party notebook", "Pictures"]);
 
   for (const page of [dm, p1, p2]) {
     await go(page, party);
