@@ -7,6 +7,7 @@ import { requireMember } from "@/lib/permissions";
 import { rsvpSchema } from "@/lib/validations/session";
 import { notifyCampaignMembers } from "@/lib/notifications";
 import { formatSessionDateTime } from "@/lib/sessionDateFormat";
+import { UserError } from "@/lib/userError";
 
 const RSVP_LABEL = { YES: "Yes", MAYBE: "Maybe", NO: "No" } as const;
 const RSVP_COLOR = { YES: 0x57a64a, MAYBE: 0xe0a33a, NO: 0xd9534f } as const;
@@ -21,7 +22,7 @@ export async function respond(
 
   const parsed = rsvpSchema.safeParse({ status, reason });
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
+    throw new UserError(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
 
   const [existing, proposal, user] = await Promise.all([
@@ -44,12 +45,12 @@ export async function respond(
   ]);
 
   if (proposal.status !== "PROPOSED" && proposal.status !== "CONFIRMED") {
-    throw new Error("This session is no longer open for RSVPs.");
+    throw new UserError("This session is no longer open for RSVPs.");
   }
 
   const isCancellation = existing?.status === "YES" && parsed.data.status === "NO";
   if (isCancellation && !parsed.data.reason) {
-    throw new Error(
+    throw new UserError(
       "Let the group know why, so they can decide whether to still run it.",
     );
   }

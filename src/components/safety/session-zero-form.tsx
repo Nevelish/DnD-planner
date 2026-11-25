@@ -8,6 +8,7 @@ import { SESSION_ZERO_QUESTIONS, type SessionZeroAnswers } from "@/lib/sessionZe
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { errorMessage } from "@/lib/userError";
 
 export function SessionZeroForm({
   campaignId,
@@ -24,7 +25,7 @@ export function SessionZeroForm({
         await saveSessionZero(campaignId, formData);
         toast.success("Session Zero saved.");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

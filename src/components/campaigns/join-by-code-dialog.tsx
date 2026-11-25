@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { errorMessage } from "@/lib/userError";
 
 /** Accepts either a bare invite code or a full invite link and returns the code. */
 function extractInviteCode(input: string) {
@@ -43,7 +44,7 @@ export function JoinByCodeDialog() {
         setCode("");
         router.push(`/campaigns/${campaignId}`);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

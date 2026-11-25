@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { errorMessage } from "@/lib/userError";
 
 export function EditCampaignForm({
   campaignId,
@@ -26,7 +27,7 @@ export function EditCampaignForm({
         await updateCampaign(campaignId, formData);
         toast.success("Campaign updated.");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

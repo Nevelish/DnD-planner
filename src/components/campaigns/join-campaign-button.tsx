@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { joinCampaignByCode } from "@/lib/actions/campaign";
 import { Button } from "@/components/ui/button";
+import { errorMessage } from "@/lib/userError";
 
 export function JoinCampaignButton({ inviteCode }: { inviteCode: string }) {
   const router = useRouter();
@@ -17,7 +18,7 @@ export function JoinCampaignButton({ inviteCode }: { inviteCode: string }) {
         const { campaignId } = await joinCampaignByCode(inviteCode);
         router.push(`/campaigns/${campaignId}`);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

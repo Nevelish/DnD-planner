@@ -9,6 +9,7 @@ import { requireUserId, requireDM, requireMember } from "@/lib/permissions";
 import { campaignSchema, discordWebhookSettingsSchema } from "@/lib/validations/campaign";
 import { createNotification } from "@/lib/notifications";
 import { postToDiscordWebhook } from "@/lib/discordWebhook";
+import { UserError } from "@/lib/userError";
 
 export async function createCampaign(formData: FormData) {
   const userId = await requireUserId();
@@ -17,7 +18,7 @@ export async function createCampaign(formData: FormData) {
     description: formData.get("description"),
   });
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
+    throw new UserError(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
 
   const campaign = await prisma.$transaction(async (tx) => {
@@ -46,7 +47,7 @@ export async function updateCampaign(campaignId: string, formData: FormData) {
     description: formData.get("description"),
   });
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
+    throw new UserError(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
 
   await prisma.campaign.update({
@@ -64,7 +65,7 @@ export async function deleteCampaign(campaignId: string) {
     where: { id: campaignId },
   });
   if (!campaign || campaign.ownerId !== userId) {
-    throw new Error("Only the campaign owner can delete this campaign.");
+    throw new UserError("Only the campaign owner can delete this campaign.");
   }
 
   await prisma.campaign.delete({ where: { id: campaignId } });
@@ -90,7 +91,7 @@ export async function joinCampaignByCode(inviteCode: string) {
     where: { inviteCode },
   });
   if (!campaign) {
-    throw new Error("That invite link is invalid or has expired.");
+    throw new UserError("That invite link is invalid or has expired.");
   }
 
   const existing = await prisma.campaignMember.findUnique({
@@ -129,7 +130,7 @@ export async function leaveCampaign(campaignId: string) {
     where: { id: campaignId },
   });
   if (campaign.ownerId === userId) {
-    throw new Error(
+    throw new UserError(
       "The DM can't leave their own campaign — delete it instead.",
     );
   }
@@ -155,7 +156,7 @@ export async function leaveCampaign(campaignId: string) {
 export async function removeMember(campaignId: string, memberId: string) {
   const dm = await requireDM(campaignId);
   if (dm.id === memberId) {
-    throw new Error("The DM can't remove themselves from the campaign.");
+    throw new UserError("The DM can't remove themselves from the campaign.");
   }
 
   await prisma.campaignMember.delete({ where: { id: memberId } });
@@ -170,7 +171,7 @@ export async function updateCampaignDiscordWebhook(campaignId: string, formData:
     discordWebhookEvents: formData.getAll("discordWebhookEvents"),
   });
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
+    throw new UserError(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
 
   await prisma.campaign.update({
@@ -192,7 +193,7 @@ export async function testCampaignDiscordWebhook(campaignId: string) {
     select: { name: true, discordWebhookUrl: true },
   });
   if (!campaign.discordWebhookUrl) {
-    throw new Error("Add a webhook URL and save it first.");
+    throw new UserError("Add a webhook URL and save it first.");
   }
 
   const ok = await postToDiscordWebhook(campaign.discordWebhookUrl, {
@@ -200,6 +201,6 @@ export async function testCampaignDiscordWebhook(campaignId: string) {
     body: `This is what ${campaign.name}'s notifications will look like here.`,
   });
   if (!ok) {
-    throw new Error("Discord rejected that webhook URL. Double-check it was copied correctly.");
+    throw new UserError("Discord rejected that webhook URL. Double-check it was copied correctly.");
   }
 }

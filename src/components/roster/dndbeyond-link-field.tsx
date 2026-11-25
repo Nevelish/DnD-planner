@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import type { DndBeyondSyncStatus } from "@prisma/client";
+import { errorMessage } from "@/lib/userError";
 
 const statusCopy: Record<DndBeyondSyncStatus, { label: string; variant: "secondary" | "success" | "destructive" | "outline" }> = {
   NOT_LINKED: { label: "Not linked", variant: "outline" },
@@ -39,7 +40,7 @@ export function DndBeyondLinkField({
         await linkDndBeyond(campaignId, characterId, url.trim());
         toast.success("Character synced from D&D Beyond.");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Couldn't sync that sheet.");
+        toast.error(errorMessage(e, "Couldn't sync that sheet."));
       }
     });
   }
@@ -51,7 +52,7 @@ export function DndBeyondLinkField({
         setUrl("");
         toast.success("Unlinked. Your character details stay as they are.");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

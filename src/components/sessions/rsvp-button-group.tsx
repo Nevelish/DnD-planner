@@ -8,6 +8,7 @@ import { respond } from "@/lib/actions/rsvp";
 import { Button } from "@/components/ui/button";
 import { CancelReasonDialog } from "@/components/sessions/cancel-reason-dialog";
 import type { RsvpStatus } from "@prisma/client";
+import { errorMessage } from "@/lib/userError";
 
 const SUCCESS_MESSAGE = {
   YES: "You're in!",
@@ -34,7 +35,7 @@ export function RsvpButtonGroup({
         setDialogOpen(false);
         toast.success(SUCCESS_MESSAGE[status]);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

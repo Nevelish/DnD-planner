@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import { NotesEditor } from "@/components/notes/notes-editor";
 import { NotebookMarkdown, type LinkablePage } from "@/components/notes/notebook-markdown";
+import { errorMessage } from "@/lib/userError";
 
 export type NotebookPage = {
   id: string;
@@ -99,7 +100,7 @@ function NewPageDialog({
         setOpen(false);
         onCreated(pageId);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Something went wrong.");
+        toast.error(errorMessage(err));
       }
     });
   }
@@ -260,7 +261,7 @@ export function Notebook({
         await action();
         done?.();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }
@@ -415,7 +416,7 @@ export function Notebook({
                               : "Renamed.",
                           );
                         } catch (err) {
-                          toast.error(err instanceof Error ? err.message : "Something went wrong.");
+                          toast.error(errorMessage(err));
                         }
                       });
                     } else {

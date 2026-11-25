@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { regenerateInviteCode } from "@/lib/actions/campaign";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { errorMessage } from "@/lib/userError";
 
 export function InviteCodeBox({
   campaignId,
@@ -37,7 +38,7 @@ export function InviteCodeBox({
         setCode(next);
         toast.success("Invite link regenerated. The old link no longer works.");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

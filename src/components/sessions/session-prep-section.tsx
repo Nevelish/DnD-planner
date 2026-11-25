@@ -9,6 +9,7 @@ import { ensureSessionPrep, saveNotebookPage } from "@/lib/actions/notebook";
 import { Button } from "@/components/ui/button";
 import { NotebookMarkdown, type LinkablePage } from "@/components/notes/notebook-markdown";
 import { NotesEditor } from "@/components/notes/notes-editor";
+import { errorMessage } from "@/lib/userError";
 
 type Prep = { id: string; content: string; updatedAt: string };
 
@@ -36,7 +37,7 @@ export function SessionPrepSection({
         setPrep(await ensureSessionPrep(campaignId, proposalId));
         setEditing(true);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

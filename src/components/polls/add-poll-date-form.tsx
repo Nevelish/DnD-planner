@@ -9,6 +9,7 @@ import { localInputToISO } from "@/lib/localDateTimeInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { errorMessage } from "@/lib/userError";
 
 export function AddPollDateForm({
   campaignId,
@@ -37,7 +38,7 @@ export function AddPollDateForm({
         setValue("");
         toast.success(isDM ? "Date added." : "Date added, and you're marked as a Yes.");
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Something went wrong.");
+        toast.error(errorMessage(err));
       }
     });
   }

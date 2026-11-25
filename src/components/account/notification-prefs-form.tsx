@@ -7,6 +7,7 @@ import type { NotificationType } from "@prisma/client";
 import { updateNotificationPrefs } from "@/lib/actions/account";
 import { MENTION_EVENT_TYPES, NOTIFICATION_PREF_GROUPS } from "@/lib/notificationPrefs";
 import { Button } from "@/components/ui/button";
+import { errorMessage } from "@/lib/userError";
 
 function Toggle({
   checked,
@@ -75,7 +76,7 @@ export function NotificationPrefsForm({
         await updateNotificationPrefs(formData);
         toast.success("Notification settings saved.");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

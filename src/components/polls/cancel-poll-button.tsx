@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { errorMessage } from "@/lib/userError";
 
 export function CancelPollButton({ campaignId, pollId }: { campaignId: string; pollId: string }) {
   const [open, setOpen] = useState(false);
@@ -26,7 +27,7 @@ export function CancelPollButton({ campaignId, pollId }: { campaignId: string; p
         toast.success("Poll cancelled.");
         setOpen(false);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

@@ -9,6 +9,7 @@ import { notifyCampaignMembers } from "@/lib/notifications";
 import { formatSessionDateTime } from "@/lib/sessionDateFormat";
 import { reminderSentAtFor } from "@/lib/sessionReminders";
 import { describePlace, placeSuffix } from "@/lib/sessionPlace";
+import { UserError } from "@/lib/userError";
 
 function parseProposalForm(formData: FormData) {
   const parsed = proposalSchema.safeParse({
@@ -20,7 +21,7 @@ function parseProposalForm(formData: FormData) {
     description: formData.get("description"),
   });
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
+    throw new UserError(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
   return parsed.data;
 }

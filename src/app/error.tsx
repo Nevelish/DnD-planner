@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
+import { errorMessage } from "@/lib/userError";
 
 export default function GlobalError({
   error,
@@ -20,7 +21,7 @@ export default function GlobalError({
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-24 text-center">
       <Image src="/icons/icon.svg" alt="" width={48} height={48} />
       <h1 className="font-display text-2xl font-semibold tracking-tight">Something went wrong</h1>
-      <p className="max-w-sm text-muted-foreground">{error.message}</p>
+      <p className="max-w-sm text-muted-foreground">{errorMessage(error, "Try again, or reload the page.")}</p>
       <Button onClick={reset}>Try again</Button>
     </div>
   );

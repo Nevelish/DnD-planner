@@ -7,6 +7,7 @@ import { updateDiscordUserId } from "@/lib/actions/account";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { errorMessage } from "@/lib/userError";
 
 export function DiscordIdForm({
   discordUserId,
@@ -27,7 +28,7 @@ export function DiscordIdForm({
         await updateDiscordUserId(formData);
         toast.success("Discord user ID saved.");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

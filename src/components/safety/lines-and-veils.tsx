@@ -9,6 +9,7 @@ import { addSafetyEntry, removeSafetyEntry } from "@/lib/actions/safety";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { errorMessage } from "@/lib/userError";
 
 type Entry = { id: string; kind: SafetyKind; text: string; mine: boolean };
 
@@ -50,7 +51,7 @@ export function LinesAndVeils({
         formRef.current?.reset();
         toast.success(kind === "LINE" ? "Line added." : "Veil added.");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }
@@ -62,7 +63,7 @@ export function LinesAndVeils({
         await removeSafetyEntry(campaignId, entry.id);
         toast.success("Removed.");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

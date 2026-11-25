@@ -13,6 +13,7 @@ import {
   renameWikiLinks,
   wikiLinkTargets,
 } from "@/lib/wikiLinks";
+import { UserError } from "@/lib/userError";
 
 const MAX_CONTENT_LENGTH = 100_000;
 const MAX_PAGES_PER_NOTEBOOK = 500;
@@ -75,7 +76,7 @@ export async function createNotebookPage(
 
   const title = titleSchema.safeParse(formData.get("title"));
   if (!title.success) {
-    throw new Error(title.error.issues[0]?.message ?? "Give the page a title.");
+    throw new UserError(title.error.issues[0]?.message ?? "Give the page a title.");
   }
   const template = formData.get("template");
   const allowed = templatesFor(kind === "DM" && isDM ? "dm" : "player");
@@ -85,7 +86,7 @@ export async function createNotebookPage(
 
   const count = await prisma.notebookPage.count({ where });
   if (count >= MAX_PAGES_PER_NOTEBOOK) {
-    throw new Error("This notebook is full. Delete some old pages first.");
+    throw new UserError("This notebook is full. Delete some old pages first.");
   }
 
   const page = await prisma.notebookPage.create({
@@ -109,11 +110,11 @@ export async function saveNotebookPage(
 
   const content = String(formData.get("content") ?? "").replace(/\r\n?/g, "\n");
   if (content.length > MAX_CONTENT_LENGTH) {
-    throw new Error("That page is too long.");
+    throw new UserError("That page is too long.");
   }
   const expectedRaw = formData.get("expectedUpdatedAt");
   if (!expectedRaw) {
-    throw new Error("Reload the page and try again.");
+    throw new UserError("Reload the page and try again.");
   }
 
   const { count } = await prisma.notebookPage.updateMany({
@@ -121,7 +122,7 @@ export async function saveNotebookPage(
     data: { content },
   });
   if (count === 0) {
-    throw new Error(
+    throw new UserError(
       "This page was changed somewhere else since you opened it. Reload to see that version, then make your edit again.",
     );
   }
@@ -143,13 +144,13 @@ export async function renameNotebookPage(
   const { where } = await resolveNotebook(campaignId, notebook);
   const title = titleSchema.safeParse(rawTitle);
   if (!title.success) {
-    throw new Error(title.error.issues[0]?.message ?? "Give the page a title.");
+    throw new UserError(title.error.issues[0]?.message ?? "Give the page a title.");
   }
   const page = await prisma.notebookPage.findFirst({
     where: { ...where, id: pageId },
     select: { title: true, updatedAt: true },
   });
-  if (!page) throw new Error("Page not found.");
+  if (!page) throw new UserError("Page not found.");
 
   // Other pages' [[Old title]] links (in the same notebook) follow the page
   // to its new title. Only when the title really changed, and only if no
@@ -203,7 +204,7 @@ export async function setNotebookPagePinned(
     where: { ...where, id: pageId },
     select: { updatedAt: true },
   });
-  if (!page) throw new Error("Page not found.");
+  if (!page) throw new UserError("Page not found.");
   await prisma.notebookPage.update({
     where: { id: pageId },
     data: { pinned, updatedAt: page.updatedAt },
@@ -221,11 +222,11 @@ export async function deleteNotebookPage(
     where: { ...where, id: pageId },
     select: { sessionProposalId: true, createdById: true },
   });
-  if (!page) throw new Error("Page not found.");
+  if (!page) throw new UserError("Page not found.");
   // In the shared party notebook anyone can edit, but only the page's
   // author or the DM can delete it, so nobody wipes the loot list by accident.
   if (kind === "PARTY" && !isDM && page.createdById !== userId) {
-    throw new Error("Only the person who made this page, or the DM, can delete it.");
+    throw new UserError("Only the person who made this page, or the DM, can delete it.");
   }
   await prisma.notebookPage.delete({ where: { id: pageId } });
   revalidateNotebook(campaignId, page.sessionProposalId);
@@ -244,16 +245,16 @@ export async function linkMentionInPage(
     where: { ...where, id: pageId },
     select: { content: true, updatedAt: true, sessionProposalId: true },
   });
-  if (!page) throw new Error("Page not found.");
+  if (!page) throw new UserError("Page not found.");
 
   const mention = findUnlinkedMentions(page.content, [title])[0];
-  if (!mention) throw new Error("That page doesn't mention it any more.");
+  if (!mention) throw new UserError("That page doesn't mention it any more.");
 
   const { count } = await prisma.notebookPage.updateMany({
     where: { ...where, id: pageId, updatedAt: page.updatedAt },
     data: { content: linkMention(page.content, mention) },
   });
-  if (count === 0) throw new Error("That page just changed. Try again.");
+  if (count === 0) throw new UserError("That page just changed. Try again.");
   revalidateNotebook(campaignId, page.sessionProposalId);
 }
 
@@ -266,7 +267,7 @@ export async function ensureSessionPrep(campaignId: string, proposalId: string) 
     where: { id: proposalId, campaignId },
     select: { id: true },
   });
-  if (!session) throw new Error("Session not found.");
+  if (!session) throw new UserError("Session not found.");
 
   const select = { id: true, content: true, updatedAt: true } as const;
   const where = { sessionProposalId: proposalId, campaignId, kind: "DM" as const, ownerId: null };

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/permissions";
 import { dateTimeFormatSchema, discordUserIdSchema } from "@/lib/validations/account";
 import { MENTION_EVENT_TYPES, NOTIFICATION_PREF_TYPES } from "@/lib/notificationPrefs";
+import { UserError } from "@/lib/userError";
 
 export async function updateDateTimeFormat(formData: FormData) {
   const userId = await requireUserId();
@@ -15,7 +16,7 @@ export async function updateDateTimeFormat(formData: FormData) {
     dateFormat: formData.get("dateFormat"),
   });
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
+    throw new UserError(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
 
   await prisma.user.update({ where: { id: userId }, data: parsed.data });
@@ -29,7 +30,7 @@ export async function updateDiscordUserId(formData: FormData) {
     discordUserId: formData.get("discordUserId"),
   });
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
+    throw new UserError(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
 
   await prisma.user.update({ where: { id: userId }, data: parsed.data });

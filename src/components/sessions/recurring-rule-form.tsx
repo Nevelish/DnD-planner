@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { RecurringRule } from "@prisma/client";
+import { errorMessage } from "@/lib/userError";
 
 function minutesToTimeInput(minutes: number) {
   const h = Math.floor(minutes / 60)
@@ -113,7 +114,7 @@ export function RecurringRuleForm({
         await upsertRecurringRule(campaignId, formData);
         toast.success("Recurring schedule saved.");
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Something went wrong.");
+        toast.error(errorMessage(err));
       }
     });
   }
@@ -125,7 +126,7 @@ export function RecurringRuleForm({
         await deactivateRecurringRule(campaignId, rule.id);
         toast.success("Recurring sessions turned off.");
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Something went wrong.");
+        toast.error(errorMessage(err));
       }
     });
   }
