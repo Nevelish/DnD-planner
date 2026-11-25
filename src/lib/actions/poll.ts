@@ -15,6 +15,7 @@ import { formatSessionDateTime } from "@/lib/sessionDateFormat";
 import { reminderSentAtFor } from "@/lib/sessionReminders";
 import { getLastSessionPlace } from "@/lib/lastSessionPlace";
 import { placeSuffix } from "@/lib/sessionPlace";
+import { UserError } from "@/lib/userError";
 
 function revalidatePoll(campaignId: string, pollId: string) {
   revalidatePath(`/campaigns/${campaignId}/polls/${pollId}`);
@@ -31,7 +32,7 @@ export async function createPoll(campaignId: string, formData: FormData) {
     options: formData.getAll("options"),
   });
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
+    throw new UserError(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
   const { title, durationMinutes, options } = parsed.data;
 
@@ -69,12 +70,12 @@ export async function votePoll(
 ) {
   const membership = await requireMember(campaignId);
   if (membership.role === "DM") {
-    throw new Error("Only players vote — the dates on offer are the ones you can make.");
+    throw new UserError("Only players vote — the dates on offer are the ones you can make.");
   }
 
   const parsed = pollVoteSchema.safeParse({ choice });
   if (!parsed.success) {
-    throw new Error("Pick Yes, Maybe or No.");
+    throw new UserError("Pick Yes, Maybe or No.");
   }
 
   const option = await prisma.datePollOption.findFirst({
@@ -82,10 +83,10 @@ export async function votePoll(
     select: { poll: { select: { status: true } } },
   });
   if (!option) {
-    throw new Error("That date isn't part of this poll.");
+    throw new UserError("That date isn't part of this poll.");
   }
   if (option.poll.status !== "OPEN") {
-    throw new Error("This poll is closed.");
+    throw new UserError("This poll is closed.");
   }
 
   await prisma.datePollVote.upsert({
@@ -111,10 +112,10 @@ export async function decidePoll(campaignId: string, pollId: string, optionId: s
   });
   const option = poll?.options[0];
   if (!poll || !option) {
-    throw new Error("That date isn't part of this poll.");
+    throw new UserError("That date isn't part of this poll.");
   }
   if (option.startsAt.getTime() <= Date.now()) {
-    throw new Error("That date has already passed — pick a later one.");
+    throw new UserError("That date has already passed — pick a later one.");
   }
 
   const players = await prisma.campaignMember.findMany({
@@ -131,7 +132,7 @@ export async function decidePoll(campaignId: string, pollId: string, optionId: s
       data: { status: "DECIDED" },
     });
     if (count === 0) {
-      throw new Error("This poll has already been decided or cancelled.");
+      throw new UserError("This poll has already been decided or cancelled.");
     }
 
     const session = await tx.sessionProposal.create({
@@ -202,7 +203,7 @@ export async function addPollOption(campaignId: string, pollId: string, formData
 
   const parsed = addPollOptionSchema.safeParse({ startsAt: formData.get("startsAt") });
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Pick a valid date and time.");
+    throw new UserError(parsed.error.issues[0]?.message ?? "Pick a valid date and time.");
   }
   const { startsAt } = parsed.data;
 
@@ -216,16 +217,16 @@ export async function addPollOption(campaignId: string, pollId: string, formData
     },
   });
   if (!poll) {
-    throw new Error("Poll not found.");
+    throw new UserError("Poll not found.");
   }
   if (poll.status !== "OPEN") {
-    throw new Error("This poll is closed.");
+    throw new UserError("This poll is closed.");
   }
   if (poll.options.some((o) => o.startsAt.getTime() === startsAt.getTime())) {
-    throw new Error("That date is already in the poll.");
+    throw new UserError("That date is already in the poll.");
   }
   if (poll.options.length >= MAX_POLL_OPTIONS) {
-    throw new Error(`This poll already has the maximum of ${MAX_POLL_OPTIONS} dates.`);
+    throw new UserError(`This poll already has the maximum of ${MAX_POLL_OPTIONS} dates.`);
   }
 
   try {
@@ -243,7 +244,7 @@ export async function addPollOption(campaignId: string, pollId: string, formData
   } catch (e) {
     // Two people adding the same date at once: the unique index catches it.
     if ((e as { code?: string }).code === "P2002") {
-      throw new Error("That date is already in the poll.");
+      throw new UserError("That date is already in the poll.");
     }
     throw e;
   }
@@ -282,16 +283,16 @@ export async function removePollOption(campaignId: string, pollId: string, optio
     },
   });
   if (!option) {
-    throw new Error("That date isn't part of this poll.");
+    throw new UserError("That date isn't part of this poll.");
   }
   if (option.poll.status !== "OPEN") {
-    throw new Error("This poll is closed.");
+    throw new UserError("This poll is closed.");
   }
   if (membership.role !== "DM" && option.addedById !== membership.userId) {
-    throw new Error("You can only remove dates you added.");
+    throw new UserError("You can only remove dates you added.");
   }
   if (option.poll._count.options <= 2) {
-    throw new Error("A poll needs at least two dates. Cancel the poll instead.");
+    throw new UserError("A poll needs at least two dates. Cancel the poll instead.");
   }
 
   await prisma.datePollOption.delete({ where: { id: optionId } });

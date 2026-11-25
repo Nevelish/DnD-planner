@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 import { createNotebookPage, type NotebookName } from "@/lib/actions/notebook";
 import { linkifyWikiLinks, normalizeTitle, wikiTargetFromHref } from "@/lib/wikiLinks";
+import { errorMessage } from "@/lib/userError";
 
 export type LinkablePage = { id: string; title: string };
 
@@ -62,7 +63,7 @@ export function NotebookMarkdown({
         toast.success(`Created "${title}".`);
         router.push(`${pageHref(pageId)}&edit=1`);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

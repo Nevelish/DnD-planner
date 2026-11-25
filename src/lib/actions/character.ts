@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireMember } from "@/lib/permissions";
 import { characterSchema } from "@/lib/validations/character";
 import { parseCharacterId, fetchDndBeyondCharacter } from "@/lib/dndbeyond";
+import { UserError } from "@/lib/userError";
 
 function parseCharacterForm(formData: FormData) {
   const parsed = characterSchema.safeParse({
@@ -17,7 +18,7 @@ function parseCharacterForm(formData: FormData) {
     notes: formData.get("notes"),
   });
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
+    throw new UserError(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
   return parsed.data;
 }
@@ -26,7 +27,7 @@ async function requireOwnCharacter(campaignId: string, characterId: string) {
   const membership = await requireMember(campaignId);
   const character = await prisma.character.findUnique({ where: { id: characterId } });
   if (!character || character.memberId !== membership.id) {
-    throw new Error("You can only manage your own character.");
+    throw new UserError("You can only manage your own character.");
   }
   return { membership, character };
 }
@@ -69,7 +70,7 @@ export async function linkDndBeyond(
 
   const dndBeyondCharacterId = parseCharacterId(url);
   if (!dndBeyondCharacterId) {
-    throw new Error("That doesn't look like a D&D Beyond character URL.");
+    throw new UserError("That doesn't look like a D&D Beyond character URL.");
   }
 
   await prisma.character.update({
@@ -98,7 +99,7 @@ export async function linkDndBeyond(
       where: { id: characterId },
       data: { dndBeyondSyncStatus: result.status },
     });
-    throw new Error(
+    throw new UserError(
       result.status === "PRIVATE"
         ? "That character sheet is private. Make it public on D&D Beyond, or keep editing it manually here."
         : "Couldn't reach D&D Beyond right now. Your manual details are unchanged.",

@@ -7,6 +7,7 @@ import { CheckIcon, CopyIcon, ExternalLinkIcon, RefreshCwIcon } from "lucide-rea
 import { regenerateCalendarToken } from "@/lib/actions/calendarToken";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { errorMessage } from "@/lib/userError";
 
 export function SubscribeCalendarBox({
   token,
@@ -36,7 +37,7 @@ export function SubscribeCalendarBox({
         setCurrentToken(next);
         toast.success("Calendar link regenerated. The old link no longer works.");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

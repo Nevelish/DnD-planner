@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { TimeFormat, DateFormat } from "@prisma/client";
+import { errorMessage } from "@/lib/userError";
 
 export function DateTimeFormatForm({
   timeFormat,
@@ -36,7 +37,7 @@ export function DateTimeFormatForm({
         await updateDateTimeFormat(formData);
         toast.success("Date & time format saved.");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

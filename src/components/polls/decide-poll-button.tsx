@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { errorMessage } from "@/lib/userError";
 
 export function DecidePollButton({
   campaignId,
@@ -41,7 +42,7 @@ export function DecidePollButton({
         setOpen(false);
         router.push(`/campaigns/${campaignId}/sessions/${sessionId}`);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ResetPasswordDialog } from "@/components/admin/reset-password-dialog";
 import { DeleteUserDialog } from "@/components/admin/delete-user-dialog";
+import { errorMessage } from "@/lib/userError";
 
 type UserRow = {
   id: string;
@@ -52,7 +53,7 @@ export function UsersTable({
         await action();
         toast.success(successMessage);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

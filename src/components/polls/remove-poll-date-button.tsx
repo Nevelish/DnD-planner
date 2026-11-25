@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { XIcon } from "lucide-react";
 
 import { removePollOption } from "@/lib/actions/poll";
+import { errorMessage } from "@/lib/userError";
 
 export function RemovePollDateButton({
   campaignId,
@@ -26,7 +27,7 @@ export function RemovePollDateButton({
         await removePollOption(campaignId, pollId, optionId);
         toast.success("Date removed.");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

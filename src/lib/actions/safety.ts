@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { requireDM, requireMember } from "@/lib/permissions";
 import { notifyCampaignMembers } from "@/lib/notifications";
 import { SESSION_ZERO_QUESTIONS } from "@/lib/sessionZero";
+import { UserError } from "@/lib/userError";
 
 const MAX_ENTRIES_PER_CAMPAIGN = 200;
 
@@ -29,12 +30,12 @@ export async function addSafetyEntry(campaignId: string, formData: FormData) {
     text: formData.get("text"),
   });
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
+    throw new UserError(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
 
   const count = await prisma.safetyEntry.count({ where: { campaignId } });
   if (count >= MAX_ENTRIES_PER_CAMPAIGN) {
-    throw new Error("This campaign's list is full. Remove an old entry first.");
+    throw new UserError("This campaign's list is full. Remove an old entry first.");
   }
 
   await prisma.safetyEntry.create({
@@ -65,7 +66,7 @@ export async function removeSafetyEntry(campaignId: string, entryId: string) {
     },
   });
   if (count === 0) {
-    throw new Error("You can only remove entries you added.");
+    throw new UserError("You can only remove entries you added.");
   }
   revalidatePath(`/campaigns/${campaignId}/safety`);
 }
@@ -77,7 +78,7 @@ export async function saveSessionZero(campaignId: string, formData: FormData) {
   for (const { key, label } of SESSION_ZERO_QUESTIONS) {
     const value = String(formData.get(key) ?? "").replace(/\r\n?/g, "\n").trim();
     if (value.length > 1000) {
-      throw new Error(`"${label}" must be 1000 characters or fewer.`);
+      throw new UserError(`"${label}" must be 1000 characters or fewer.`);
     }
     if (value) answers[key] = value;
   }

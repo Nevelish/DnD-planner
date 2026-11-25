@@ -5,6 +5,7 @@ import sharp from "sharp";
 
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/permissions";
+import { UserError } from "@/lib/userError";
 
 // The browser already crops and shrinks the picture before sending it, so
 // this stays well under Next's 1 MB server-action limit.
@@ -22,10 +23,10 @@ export async function uploadAvatar(formData: FormData) {
 
   const file = formData.get("avatar");
   if (!(file instanceof File) || file.size === 0) {
-    throw new Error("Pick a picture to upload.");
+    throw new UserError("Pick a picture to upload.");
   }
   if (file.size > MAX_UPLOAD_BYTES) {
-    throw new Error("That picture is too large.");
+    throw new UserError("That picture is too large.");
   }
 
   let data: Uint8Array<ArrayBuffer>;
@@ -34,7 +35,7 @@ export async function uploadAvatar(formData: FormData) {
       limitInputPixels: 40_000_000,
     });
     const { format } = await image.metadata();
-    if (!format || !ALLOWED_FORMATS.has(format)) throw new Error("unsupported");
+    if (!format || !ALLOWED_FORMATS.has(format)) throw new UserError("unsupported");
     const encoded = await image
       .rotate() // apply the camera's orientation before the metadata is dropped
       .resize(256, 256, { fit: "cover" })
@@ -42,7 +43,7 @@ export async function uploadAvatar(formData: FormData) {
       .toBuffer();
     data = new Uint8Array(encoded);
   } catch {
-    throw new Error("That file isn't a picture we can read. Try a JPEG or PNG.");
+    throw new UserError("That file isn't a picture we can read. Try a JPEG or PNG.");
   }
 
   const now = new Date();

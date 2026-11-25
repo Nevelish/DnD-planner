@@ -28,6 +28,7 @@ import {
   wikiLinkTargets,
 } from "@/lib/wikiLinks";
 import { caretCoordinates } from "@/lib/caretCoordinates";
+import { errorMessage } from "@/lib/userError";
 
 const MAX_SUGGESTIONS = 6;
 const MAX_MENTION_CHIPS = 3;
@@ -210,7 +211,7 @@ export function NotesEditor({
         toast.success("Saved.");
         onSaved?.({ content, updatedAt: result.updatedAt });
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

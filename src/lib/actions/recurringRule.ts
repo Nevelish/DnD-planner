@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireDM } from "@/lib/permissions";
 import { recurringRuleSchema } from "@/lib/validations/recurringRule";
+import { UserError } from "@/lib/userError";
 
 export async function upsertRecurringRule(campaignId: string, formData: FormData) {
   await requireDM(campaignId);
@@ -18,7 +19,7 @@ export async function upsertRecurringRule(campaignId: string, formData: FormData
     leadTimeDays: formData.get("leadTimeDays"),
   });
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
+    throw new UserError(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
 
   await prisma.$transaction(async (tx) => {

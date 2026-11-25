@@ -9,6 +9,7 @@ import { removeAvatar, uploadAvatar } from "@/lib/actions/avatar";
 import type { AvatarUser } from "@/lib/avatar";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { errorMessage } from "@/lib/userError";
 
 const UPLOAD_SIZE = 512;
 
@@ -62,7 +63,7 @@ export function AvatarUploader({ user }: { user: AvatarUser }) {
         toast.success("Profile picture updated.");
         router.refresh();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       } finally {
         if (inputRef.current) inputRef.current.value = "";
       }
@@ -77,7 +78,7 @@ export function AvatarUploader({ user }: { user: AvatarUser }) {
         toast.success("Profile picture removed.");
         router.refresh();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

@@ -179,6 +179,40 @@ importer deploys images, it doesn't build them.
    npm run dev
    ```
 
+## Tests
+
+End-to-end tests in `e2e/` drive a production build of the app in a real
+browser (Playwright) against a real Postgres database. They cover what would
+hurt most if it broke: signing in and account security, who can see and
+change what (including forged requests), the scan for leaked secrets,
+scheduling and RSVPs, date polls, notebooks, recaps and the safety tools.
+
+They run on GitHub for every pull request and every push to `main`
+(`.github/workflows/e2e.yml`). To run them locally:
+
+1. Create a separate, throwaway database. **The tests wipe it** before each
+   test file, so never point them at real data:
+
+   ```bash
+   docker compose -f docker-compose.dev.yml exec postgres createdb -U dnd dnd_planner_e2e
+   ```
+
+2. Install a browser for Playwright (once), then build the app and run the tests:
+
+   ```bash
+   npx playwright install chromium
+   ```
+
+   ```bash
+   npm run build && npm run test:e2e
+   ```
+
+The tests start the app themselves on port 3100 and expect `psql` on your
+`PATH`. Set `E2E_DATABASE_URL` to use a database other than
+`postgresql://dnd:dnd@localhost:5432/dnd_planner_e2e`. After a failure,
+`npx playwright show-trace test-results/<test>/trace.zip` replays what the
+browser saw.
+
 ## Environment variables
 
 See `.env.example`. `DATABASE_URL`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL` are

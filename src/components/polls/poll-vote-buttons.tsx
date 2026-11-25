@@ -7,6 +7,7 @@ import { CheckIcon, CircleHelpIcon, XIcon } from "lucide-react";
 import { votePoll } from "@/lib/actions/poll";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { errorMessage } from "@/lib/userError";
 
 type Choice = "YES" | "MAYBE" | "NO";
 
@@ -36,7 +37,7 @@ export function PollVoteButtons({
       try {
         await votePoll(campaignId, pollId, optionId, choice);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

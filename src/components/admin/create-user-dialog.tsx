@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { errorMessage } from "@/lib/userError";
 
 export function CreateUserDialog() {
   const [open, setOpen] = useState(false);
@@ -41,7 +42,7 @@ export function CreateUserDialog() {
         setOpen(false);
         reset();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

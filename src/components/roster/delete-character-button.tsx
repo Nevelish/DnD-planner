@@ -6,6 +6,7 @@ import { Trash2Icon } from "lucide-react";
 
 import { deleteCharacter } from "@/lib/actions/character";
 import { Button } from "@/components/ui/button";
+import { errorMessage } from "@/lib/userError";
 
 export function DeleteCharacterButton({
   campaignId,
@@ -27,7 +28,7 @@ export function DeleteCharacterButton({
             await deleteCharacter(campaignId, characterId);
             toast.success("Character removed.");
           } catch (e) {
-            toast.error(e instanceof Error ? e.message : "Something went wrong.");
+            toast.error(errorMessage(e));
           }
         })
       }

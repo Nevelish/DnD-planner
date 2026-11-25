@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import type { AvatarUser } from "@/lib/avatar";
+import { errorMessage } from "@/lib/userError";
 
 type MemberRow = {
   id: string;
@@ -37,7 +38,7 @@ export function MemberList({
         await removeMember(campaignId, memberId);
         toast.success("Member removed.");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }
@@ -49,7 +50,7 @@ export function MemberList({
         toast.success("You left the campaign.");
         router.push("/campaigns");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

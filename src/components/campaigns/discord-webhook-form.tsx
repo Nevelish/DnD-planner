@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { NotificationType } from "@prisma/client";
+import { errorMessage } from "@/lib/userError";
 
 export function DiscordWebhookForm({
   campaignId,
@@ -50,7 +51,7 @@ export function DiscordWebhookForm({
         await updateCampaignDiscordWebhook(campaignId, formData);
         toast.success(url ? "Discord webhook saved." : "Discord notifications turned off.");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }
@@ -61,7 +62,7 @@ export function DiscordWebhookForm({
         await testCampaignDiscordWebhook(campaignId);
         toast.success("Test message sent — check your Discord channel.");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

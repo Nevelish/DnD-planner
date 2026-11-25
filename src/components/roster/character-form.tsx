@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { errorMessage } from "@/lib/userError";
 
 export function CharacterForm({
   campaignId,
@@ -51,7 +52,7 @@ export function CharacterForm({
         toast.success("Character saved.");
         setOpen(false);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

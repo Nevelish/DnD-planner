@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { errorMessage } from "@/lib/userError";
 
 type TargetUser = { id: string; name: string | null; email: string | null };
 
@@ -33,7 +34,7 @@ export function DeleteUserDialog({
         toast.success(`${user.name ?? user.email} was deleted.`);
         onOpenChange(false);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

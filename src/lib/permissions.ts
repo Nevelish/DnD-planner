@@ -3,12 +3,13 @@ import { redirect, notFound } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { UserError } from "@/lib/userError";
 
 /**
- * Use in Server Actions / route handlers, where throwing a plain Error is
+ * Use in Server Actions / route handlers, where throwing an error is
  * preferable to a Next.js redirect so the caller can surface a form error.
  */
-export class PermissionError extends Error {}
+export class PermissionError extends UserError {}
 
 export async function getCurrentUserId(): Promise<string | null> {
   const session = await auth();

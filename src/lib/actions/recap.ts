@@ -7,6 +7,7 @@ import { requireMember } from "@/lib/permissions";
 import { notifyCampaignMembers } from "@/lib/notifications";
 import { formatSessionDateTime } from "@/lib/sessionDateFormat";
 import { recapExcerpt } from "@/lib/recap";
+import { UserError } from "@/lib/userError";
 
 const MAX_RECAP_LENGTH = 50_000;
 
@@ -21,7 +22,7 @@ export async function saveRecap(campaignId: string, proposalId: string, formData
 
   const content = String(formData.get("content") ?? "").replace(/\r\n?/g, "\n");
   if (content.length > MAX_RECAP_LENGTH) {
-    throw new Error("That recap is too long.");
+    throw new UserError("That recap is too long.");
   }
   const expectedRaw = formData.get("expectedUpdatedAt");
   const expectedUpdatedAt = expectedRaw ? new Date(String(expectedRaw)) : null;
@@ -31,10 +32,10 @@ export async function saveRecap(campaignId: string, proposalId: string, formData
     select: { status: true, recap: true, title: true, startsAt: true },
   });
   if (!session) {
-    throw new Error("Session not found.");
+    throw new UserError("Session not found.");
   }
   if (session.status !== "COMPLETED") {
-    throw new Error("A recap can be written once the session has been played.");
+    throw new UserError("A recap can be written once the session has been played.");
   }
 
   const recap = content.trim() ? content : null;
@@ -44,7 +45,7 @@ export async function saveRecap(campaignId: string, proposalId: string, formData
     data: { recap, recapUpdatedAt: now, recapAuthorId: membership.userId },
   });
   if (count === 0) {
-    throw new Error(
+    throw new UserError(
       "Someone else changed this recap since you opened it. Reload the page to see their version, then make your edit again.",
     );
   }

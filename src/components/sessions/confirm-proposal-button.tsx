@@ -6,6 +6,7 @@ import { CheckCircle2Icon } from "lucide-react";
 
 import { confirmProposal } from "@/lib/actions/session";
 import { Button } from "@/components/ui/button";
+import { errorMessage } from "@/lib/userError";
 
 export function ConfirmProposalButton({
   campaignId,
@@ -22,7 +23,7 @@ export function ConfirmProposalButton({
         await confirmProposal(campaignId, proposalId);
         toast.success("Session confirmed.");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }

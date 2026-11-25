@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { errorMessage } from "@/lib/userError";
 
 export function DeleteCampaignButton({ campaignId }: { campaignId: string }) {
   const router = useRouter();
@@ -27,7 +28,7 @@ export function DeleteCampaignButton({ campaignId }: { campaignId: string }) {
         await deleteCampaign(campaignId);
         router.push("/campaigns");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
         setOpen(false);
       }
     });

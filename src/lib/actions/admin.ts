@@ -11,6 +11,7 @@ import {
   createUserSchema,
   publicUrlSchema,
 } from "@/lib/validations/admin";
+import { UserError } from "@/lib/userError";
 
 export type ActionResult = { error?: string; success?: boolean };
 
@@ -24,14 +25,14 @@ export async function createUser(input: {
 
   const parsed = createUserSchema.safeParse(input);
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
+    throw new UserError(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
 
   const existing = await prisma.user.findUnique({
     where: { email: parsed.data.email },
   });
   if (existing) {
-    throw new Error("An account with that email already exists.");
+    throw new UserError("An account with that email already exists.");
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 10);
@@ -55,7 +56,7 @@ export async function setUserRole(userId: string, role: "ADMIN" | "USER") {
       where: { role: "ADMIN", NOT: { id: userId } },
     });
     if (otherAdmins === 0) {
-      throw new Error("At least one admin must remain.");
+      throw new UserError("At least one admin must remain.");
     }
   }
 
@@ -67,7 +68,7 @@ export async function setUserDisabled(userId: string, disabled: boolean) {
   const adminId = await requireAdmin();
 
   if (disabled && userId === adminId) {
-    throw new Error("You can't disable your own account.");
+    throw new UserError("You can't disable your own account.");
   }
 
   await prisma.user.update({ where: { id: userId }, data: { disabled } });
@@ -78,14 +79,14 @@ export async function deleteUser(userId: string) {
   const adminId = await requireAdmin();
 
   if (userId === adminId) {
-    throw new Error("You can't delete your own account.");
+    throw new UserError("You can't delete your own account.");
   }
 
   try {
     await prisma.user.delete({ where: { id: userId } });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2003") {
-      throw new Error(
+      throw new UserError(
         "This account still owns a campaign, proposed a session, or authored a note — delete or reassign those first.",
       );
     }
@@ -100,12 +101,12 @@ export async function adminResetPassword(userId: string, newPassword: string) {
 
   const parsed = adminSetPasswordSchema.safeParse({ newPassword });
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
+    throw new UserError(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
 
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
   if (!user.passwordHash) {
-    throw new Error(
+    throw new UserError(
       "This account signs in with Discord and has no password to reset.",
     );
   }

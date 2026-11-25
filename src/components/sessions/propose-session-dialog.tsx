@@ -25,6 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { errorMessage } from "@/lib/userError";
 
 type Mode = "create" | "edit" | "publish";
 type ProposalDefaults = {
@@ -215,7 +216,7 @@ export function ProposeSessionDialog({
         toast.success("Session saved.");
         setOpen(false);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Something went wrong.");
+        toast.error(errorMessage(e));
       }
     });
   }
