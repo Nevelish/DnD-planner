@@ -8,6 +8,7 @@ import { NotebookPenIcon, PencilIcon } from "lucide-react";
 import { ensureSessionPrep, saveNotebookPage } from "@/lib/actions/notebook";
 import { Button } from "@/components/ui/button";
 import { NotebookMarkdown, type LinkablePage } from "@/components/notes/notebook-markdown";
+import { toggleTaskAtLine } from "@/lib/taskList";
 import { NotesEditor } from "@/components/notes/notes-editor";
 import { errorMessage } from "@/lib/userError";
 
@@ -42,6 +43,27 @@ export function SessionPrepSection({
     });
   }
 
+  /** A checklist box clicked in the prep: saved straight away. */
+  function toggleTask(line: number) {
+    if (!prep) return;
+    const before = prep;
+    const content = toggleTaskAtLine(before.content, line);
+    if (content === null) return;
+    setPrep({ ...before, content });
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.set("content", content);
+        formData.set("expectedUpdatedAt", before.updatedAt);
+        const { updatedAt } = await saveNotebookPage(campaignId, "mine", before.id, formData);
+        setPrep({ ...before, content, updatedAt });
+      } catch (e) {
+        setPrep(before);
+        toast.error(errorMessage(e));
+      }
+    });
+  }
+
   if (!prep) {
     return (
       <div className="flex flex-col items-start gap-3 rounded-md border border-dashed p-4 text-sm">
@@ -63,23 +85,34 @@ export function SessionPrepSection({
         initialContent={prep.content}
         initialUpdatedAt={prep.updatedAt}
         save={(formData) => saveNotebookPage(campaignId, "mine", prep.id, formData)}
-        onSaved={({ content, updatedAt }) => {
+        onSaved={({ content, updatedAt, quiet }) => {
           setPrep({ ...prep, content, updatedAt });
-          setEditing(false);
+          if (!quiet) setEditing(false);
         }}
         onCancel={() => setEditing(false)}
         linkTargets={linkablePages.map((p) => p.title)}
-        renderPreview={(content) => (
-          <NotebookMarkdown campaignId={campaignId} content={content} pages={linkablePages} />
+        renderPreview={(content, toggleTask) => (
+          <NotebookMarkdown
+            campaignId={campaignId}
+            content={content}
+            pages={linkablePages}
+            onToggleTask={toggleTask}
+          />
         )}
-        placeholder={"Markdown works. Link notebook pages with [[Page title]]."}
+        placeholder={"Markdown works. Link notebook pages with [[Page title]]. Paste or drop pictures in."}
+        imageUpload={{ campaignId, notebook: "mine" }}
       />
     );
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <NotebookMarkdown campaignId={campaignId} content={prep.content} pages={linkablePages} />
+      <NotebookMarkdown
+        campaignId={campaignId}
+        content={prep.content}
+        pages={linkablePages}
+        onToggleTask={isPending ? undefined : toggleTask}
+      />
       <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-3">
         <Button asChild size="sm" variant="ghost">
           <Link href={`/campaigns/${campaignId}/notes?page=${prep.id}`}>Open in notebook</Link>

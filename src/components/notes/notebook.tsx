@@ -472,7 +472,7 @@ export function Notebook({
               // page is empty or was just created.
               defaultTab={selected.startInEdit || !selected.content.trim() ? "edit" : "preview"}
               linkTargets={linkablePages.filter((p) => p.id !== selected.id).map((p) => p.title)}
-              renderPreview={(content) => (
+              renderPreview={(content, toggleTask) => (
                 <NotebookMarkdown
                   campaignId={campaignId}
                   content={content}
@@ -480,10 +480,12 @@ export function Notebook({
                   confirmLeave={confirmLeave}
                   notebook={notebook}
                   basePath={pathname}
+                  onToggleTask={toggleTask}
                 />
               )}
-              placeholder={"Markdown works. Link other pages with [[Page title]]."}
+              placeholder={"Markdown works. Link other pages with [[Page title]]. Paste or drop pictures in."}
               linkHelp={kind}
+              imageUpload={{ campaignId, notebook }}
             />
             {selected.backlinks.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 text-sm">

@@ -7,6 +7,7 @@ export type MarkdownAction =
   | "h2"
   | "h3"
   | "bulletList"
+  | "taskList"
   | "numberList"
   | "quote";
 
@@ -77,6 +78,8 @@ export function applyMarkdownAction(action: MarkdownAction, sel: Selection): Res
       return prefixLines(sel, "> ");
     case "bulletList":
       return prefixLines(sel, "- ");
+    case "taskList":
+      return prefixLines(sel, "- [ ] ");
     case "numberList":
       return prefixLines(sel, (i) => `${i + 1}. `);
   }

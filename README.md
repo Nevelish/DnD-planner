@@ -80,6 +80,17 @@ import, and in-app notifications.
   DM), and the party shares a notebook everyone can add to and edit. Both
   have pages, search, links, suggestions and a "Session notes" template.
   In the party notebook only a page's author or the DM can delete it.
+- **Checklists and pictures in notebooks**: tick `- [ ]` items straight
+  from a page or the session prep, without opening the editor. Add maps,
+  handouts and NPC portraits with the picture button, or by pasting or
+  dropping them into the editor. Pictures are shrunk to at most 2400 px and
+  stripped of hidden metadata such as phone GPS location. They're only
+  visible to whoever can see the notebook they were added to: DM-notebook
+  maps stay with the DM, and party handouts go to everyone in the campaign.
+  The DM's **Notes → Pictures** tab lists every picture in the DM's and party
+  notebooks with the pages that use it, shows how much of the campaign's
+  500 MB is used, and can delete pictures one at a time or all unused ones
+  at once. Players' private pictures only show there as a total.
 - **Profile pictures**: optional; upload one under Account and it shows next
   to your name in the nav, member lists and RSVPs. Discord sign-ins use
   the Discord picture until you upload your own; otherwise initials. Photos
