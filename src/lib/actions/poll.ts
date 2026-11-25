@@ -16,11 +16,15 @@ import { reminderSentAtFor } from "@/lib/sessionReminders";
 import { getLastSessionPlace } from "@/lib/lastSessionPlace";
 import { placeSuffix } from "@/lib/sessionPlace";
 import { UserError } from "@/lib/userError";
+import { refreshPollMessages } from "@/lib/discord/pollPosts";
 
+/** After any change to a poll: refresh its pages, and the Discord bot's
+ * posts about it (counts, the best date, or which date was picked). */
 function revalidatePoll(campaignId: string, pollId: string) {
   revalidatePath(`/campaigns/${campaignId}/polls/${pollId}`);
   revalidatePath(`/campaigns/${campaignId}/sessions`);
   revalidatePath(`/campaigns/${campaignId}`);
+  void refreshPollMessages(pollId);
 }
 
 export async function createPoll(campaignId: string, formData: FormData) {

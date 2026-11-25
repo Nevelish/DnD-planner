@@ -6,7 +6,9 @@ import { getRequestOrigin } from "@/lib/requestOrigin";
 import { addPlayerToCampaign } from "@/lib/membership";
 import { recordRsvp, rsvpNeedsReason, type RsvpAnswer } from "@/lib/rsvp";
 import { UserError } from "@/lib/userError";
-import { createJoinToken } from "@/lib/discord/joinLink";
+import { createJoinToken, type JoinTarget } from "@/lib/discord/joinLink";
+import { pollVotePanel, refreshPollMessages } from "@/lib/discord/pollPosts";
+import { saveVotesFromList } from "@/lib/pollVotes";
 
 // What Discord sends: https://discord.com/developers/docs/interactions/receiving-and-responding
 type DiscordUser = { id: string; username: string; global_name?: string | null };
@@ -21,6 +23,7 @@ export type Interaction = {
     name?: string;
     options?: { name: string }[];
     custom_id?: string;
+    values?: string[]; // what was picked in a dropdown
     components?: ModalRow[];
   };
 };
@@ -99,6 +102,10 @@ export async function handleInteraction(interaction: Interaction): Promise<unkno
         return await rsvpClick(interaction, id, status);
       }
       if (kind === "connect") return await connectClick(interaction, id);
+      if (kind === "pollvote") return await pollVoteClick(interaction, id);
+      if (kind === "pollyes" || kind === "pollmaybe") {
+        return await pollListChange(interaction, id, kind === "pollyes" ? "YES" : "MAYBE");
+      }
     }
     if (interaction.type === InteractionType.MODAL_SUBMIT) {
       const [kind, id] = customId.split(":");
@@ -186,6 +193,55 @@ async function connectClick(interaction: Interaction, campaignId: string) {
   };
 }
 
+// ---------- Who clicked ----------
+
+type CampaignForClick = { id: string; name: string; discordAutoJoin: boolean; discordChannelId: string | null };
+
+/**
+ * The campaign membership of whoever clicked a button. Someone who isn't in
+ * the campaign yet either joins on the spot (if the DM allows that, and only
+ * from the campaign's own channel) or gets a private link to join with their
+ * Discord account; then `response` is the reply to send instead.
+ */
+async function memberForClick(
+  interaction: Interaction,
+  campaign: CampaignForClick,
+  link: {
+    join: JoinTarget;
+    joinText: string;
+    joinButton: string;
+  },
+): Promise<
+  | { membership: { id: string; userId: string; role: "DM" | "PLAYER" }; welcome: boolean }
+  | { response: unknown }
+> {
+  const discordUser = discordUserOf(interaction);
+  let user = await plannerUserFor(discordUser.id);
+  if (user?.disabled) return { response: privately("Your planner account has been disabled. Ask your admin.") };
+
+  const membership = user
+    ? await prisma.campaignMember.findUnique({
+        where: { campaignId_userId: { campaignId: campaign.id, userId: user.id } },
+      })
+    : null;
+  if (membership) return { membership, welcome: false };
+
+  const canAutoJoin =
+    campaign.discordAutoJoin && !!interaction.channel_id && interaction.channel_id === campaign.discordChannelId;
+  if (!canAutoJoin) {
+    const token = createJoinToken({ discordId: discordUser.id, campaignId: campaign.id, ...link.join });
+    return {
+      response: privately(
+        `You're not in **${campaign.name}** on the planner yet. Join once with your Discord account and ` +
+          `${link.joinText}. After that, these buttons just work.`,
+        [linkButton(link.joinButton, `${await getRequestOrigin()}/discord/join?token=${token}`)],
+      ),
+    };
+  }
+  user ??= await createUserFromDiscord(discordUser, interaction.member?.nick);
+  return { membership: await addPlayerToCampaign(campaign.id, user.id), welcome: true };
+}
+
 // ---------- RSVP buttons ----------
 
 async function rsvpClick(interaction: Interaction, sessionId: string, status: RsvpAnswer) {
@@ -200,34 +256,13 @@ async function rsvpClick(interaction: Interaction, sessionId: string, status: Rs
   });
   if (!session) return privately("That session doesn't exist any more.");
 
-  const discordUser = discordUserOf(interaction);
-  let user = await plannerUserFor(discordUser.id);
-  if (user?.disabled) return privately("Your planner account has been disabled. Ask your admin.");
-
-  let membership = user
-    ? await prisma.campaignMember.findUnique({
-        where: { campaignId_userId: { campaignId: session.campaignId, userId: user.id } },
-      })
-    : null;
-
-  let welcome = false;
-  if (!membership) {
-    // Joining straight from Discord only counts from the campaign's own
-    // channel, and only if the DM turned it on.
-    const canAutoJoin =
-      session.campaign.discordAutoJoin && !!interaction.channel_id && interaction.channel_id === session.campaign.discordChannelId;
-    if (!canAutoJoin) {
-      const token = createJoinToken({ discordId: discordUser.id, campaignId: session.campaignId, sessionId, status });
-      return privately(
-        `You're not in **${session.campaign.name}** on the planner yet. Join once with your Discord account and ` +
-          "your answer will be saved. After that, these buttons just work.",
-        [linkButton("Join and answer", `${await getRequestOrigin()}/discord/join?token=${token}`)],
-      );
-    }
-    user ??= await createUserFromDiscord(discordUser, interaction.member?.nick);
-    membership = await addPlayerToCampaign(session.campaignId, user.id);
-    welcome = true;
-  }
+  const who = await memberForClick(interaction, { id: session.campaignId, ...session.campaign }, {
+    join: { sessionId, status },
+    joinText: "your answer will be saved",
+    joinButton: "Join and answer",
+  });
+  if ("response" in who) return who.response;
+  const { membership, welcome } = who;
 
   if (membership.role === "DM") return privately("You're the DM of this one, so there's nothing to RSVP.");
 
@@ -277,4 +312,51 @@ async function reasonSubmit(interaction: Interaction, sessionId: string) {
 
   await recordRsvp({ campaignId: session.campaignId, proposalId: sessionId, membership, status: "NO", reason });
   return privately(`Thanks for letting everyone know. You're down as **Can't make it** for **${session.title || "the session"}**.`);
+}
+
+// ---------- Date polls ----------
+
+/** The poll's Vote button: opens the private voting panel. */
+async function pollVoteClick(interaction: Interaction, pollId: string) {
+  const poll = await prisma.datePoll.findUnique({
+    where: { id: pollId },
+    select: { campaignId: true, campaign: { select: { name: true, discordAutoJoin: true, discordChannelId: true } } },
+  });
+  if (!poll) return privately("That poll doesn't exist any more.");
+
+  const who = await memberForClick(interaction, { id: poll.campaignId, ...poll.campaign }, {
+    join: { pollId },
+    joinText: "you can vote on the dates",
+    joinButton: "Join and vote",
+  });
+  if ("response" in who) return who.response;
+  if (who.membership.role === "DM") {
+    return privately("You're the DM of this one: players vote, and you pick the date on the planner.");
+  }
+
+  const welcome = who.welcome ? `Welcome to **${poll.campaign.name}**!` : undefined;
+  const panel = await pollVotePanel(pollId, who.membership.id, welcome);
+  if (!panel) return privately("This poll is closed.");
+  return privately(panel.content, panel.components);
+}
+
+/** A change in one of the panel's two lists: saved straight away. */
+async function pollListChange(interaction: Interaction, pollId: string, choice: "YES" | "MAYBE") {
+  const poll = await prisma.datePoll.findUnique({ where: { id: pollId }, select: { campaignId: true } });
+  const user = await plannerUserFor(discordUserOf(interaction).id);
+  const membership =
+    poll && user && !user.disabled
+      ? await prisma.campaignMember.findUnique({
+          where: { campaignId_userId: { campaignId: poll.campaignId, userId: user.id } },
+        })
+      : null;
+  if (!poll || !membership || membership.role !== "PLAYER") {
+    return { type: Callback.UPDATE_MESSAGE, data: { content: "I couldn't save that. Try voting on the website.", components: [] } };
+  }
+
+  await saveVotesFromList({ pollId, memberId: membership.id, choice, optionIds: interaction.data?.values ?? [] });
+  void refreshPollMessages(pollId);
+  const panel = await pollVotePanel(pollId, membership.id, "Saved.");
+  if (!panel) return { type: Callback.UPDATE_MESSAGE, data: { content: "This poll is closed.", components: [] } };
+  return { type: Callback.UPDATE_MESSAGE, data: { content: panel.content, components: panel.components } };
 }

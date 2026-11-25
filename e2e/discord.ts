@@ -57,6 +57,14 @@ export const buttonClick = (discordId: string, customId: string, { channel = CHA
   data: { custom_id: customId, component_type: 2 },
 });
 
+export const listChange = (discordId: string, customId: string, values: string[]) => ({
+  type: 3,
+  guild_id: GUILD,
+  channel_id: CHANNEL,
+  ...who(discordId),
+  data: { custom_id: customId, component_type: 3, values },
+});
+
 export const modalSubmit = (discordId: string, customId: string, reason: string) => ({
   type: 5,
   guild_id: GUILD,

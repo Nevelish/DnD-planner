@@ -11,9 +11,9 @@ import { linkedDiscordId } from "@/lib/discord/accounts";
 import { UserError } from "@/lib/userError";
 
 /**
- * Finishes what someone started by clicking an RSVP button in Discord before
- * they were in the campaign: joins them up as a player and saves the answer.
- * Only for the Discord account that clicked.
+ * Finishes what someone started by clicking a button in Discord before they
+ * were in the campaign: joins them up as a player and saves their RSVP (or,
+ * from a poll, sends them to vote). Only for the Discord account that clicked.
  */
 export async function joinFromDiscord(token: string) {
   const userId = await getCurrentUserId();
@@ -25,15 +25,20 @@ export async function joinFromDiscord(token: string) {
   }
 
   const membership = await addPlayerToCampaign(data.campaignId, userId);
-  const sessionUrl = `/campaigns/${data.campaignId}/sessions/${data.sessionId}`;
   revalidatePath(`/campaigns/${data.campaignId}`);
-  if (membership.role === "DM") return { sessionUrl, saved: false };
+  // From a poll's Vote button: they vote on the poll's page.
+  if (data.pollId !== undefined) {
+    return { url: `/campaigns/${data.campaignId}/polls/${data.pollId}`, saved: false };
+  }
+
+  const url = `/campaigns/${data.campaignId}/sessions/${data.sessionId}`;
+  if (membership.role === "DM") return { url, saved: false };
   // Backing out of a Yes needs a reason, which the session page asks for.
-  if (await rsvpNeedsReason(data.sessionId, membership.id, data.status)) return { sessionUrl, saved: false };
+  if (await rsvpNeedsReason(data.sessionId, membership.id, data.status)) return { url, saved: false };
 
   await recordRsvp({ campaignId: data.campaignId, proposalId: data.sessionId, membership, status: data.status });
-  revalidatePath(sessionUrl);
-  return { sessionUrl, saved: true };
+  revalidatePath(url);
+  return { url, saved: true };
 }
 
 /** Stops the bot posting in the campaign's channel. Posts go back to the

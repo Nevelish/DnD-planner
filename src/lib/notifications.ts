@@ -13,6 +13,12 @@ import {
   sessionIdFromLink,
   type DiscordEmbed,
 } from "@/lib/discord/sessionPosts";
+import {
+  pollIdFromLink,
+  postPollMessage,
+  refreshPollMessages,
+  replyToPollMessage,
+} from "@/lib/discord/pollPosts";
 
 // With the Discord bot, posts about these get RSVP buttons...
 const RSVP_BUTTON_TYPES: NotificationType[] = [
@@ -30,17 +36,26 @@ const REPLY_TYPES: NotificationType[] = [
   "SESSION_REMINDER",
 ];
 
-/** Posts one event as the bot: a reply to the session's post where there is
- * one, a new post with RSVP buttons for session news, a plain post otherwise. */
+/** Posts one event as the bot: a reply to the session's (or poll's) post
+ * where there is one, a new post with buttons for session and poll news, a
+ * plain post otherwise. */
 async function postViaBot(input: {
   type: NotificationType;
   channelId: string;
   sessionId: string | null;
+  pollId: string | null;
   embed: DiscordEmbed;
   content?: string;
   mentionDiscordIds: string[];
 }) {
-  const { type, channelId, sessionId, embed, content, mentionDiscordIds } = input;
+  const { type, channelId, sessionId, pollId, embed, content, mentionDiscordIds } = input;
+  if (pollId && type === "DATE_POLL_OPENED") {
+    // A new poll gets a post with a Vote button; news about one that's
+    // already posted (a date was added) is a reply to it.
+    if (await replyToPollMessage({ channelId, pollId, embed, content, mentionDiscordIds })) return;
+    await postPollMessage({ channelId, pollId, embed, content, mentionDiscordIds });
+    return;
+  }
   if (sessionId && REPLY_TYPES.includes(type)) {
     if (await replyToSessionMessage({ channelId, sessionId, embed, content, mentionDiscordIds })) return;
   }
@@ -103,11 +118,13 @@ async function notifyDiscord(
   });
   if (!campaign) return;
 
-  // Whatever happened to a session (an RSVP, a reschedule, a cancellation),
-  // the bot's earlier posts about it should show it, posted or not.
+  // Whatever happened to a session or poll (an RSVP, a reschedule, a new
+  // date), the bot's earlier posts about it should show it, posted or not.
   const sessionId = sessionIdFromLink(input.link);
+  const pollId = pollIdFromLink(input.link);
   const useBot = !!campaign.discordChannelId && !!discordBotConfig();
   if (sessionId && useBot) void refreshSessionMessages(sessionId);
+  if (pollId && useBot) void refreshPollMessages(pollId);
 
   if (!useBot && !campaign.discordWebhookUrl) return;
   if (!campaign.discordWebhookEvents.includes(input.type)) return;
@@ -151,6 +168,7 @@ async function notifyDiscord(
       type: input.type,
       channelId: campaign.discordChannelId!,
       sessionId,
+      pollId,
       embed,
       content,
       mentionDiscordIds,
