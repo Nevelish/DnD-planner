@@ -9,16 +9,47 @@ import {
   postChannelMessage,
   postSessionMessage,
   refreshSessionMessages,
+  replyToSessionMessage,
   sessionIdFromLink,
+  type DiscordEmbed,
 } from "@/lib/discord/sessionPosts";
 
-// Posts about these get RSVP buttons when the campaign uses the Discord bot.
+// With the Discord bot, posts about these get RSVP buttons...
 const RSVP_BUTTON_TYPES: NotificationType[] = [
   "SESSION_PROPOSED",
   "SESSION_RESCHEDULED",
   "SESSION_CONFIRMED",
   "SESSION_REMINDER",
 ];
+// ...and these are replies to the session's existing post (which is also
+// updated), so everything about one session stays together in the channel.
+const REPLY_TYPES: NotificationType[] = [
+  "SESSION_RESCHEDULED",
+  "SESSION_CONFIRMED",
+  "SESSION_CANCELLED",
+  "SESSION_REMINDER",
+];
+
+/** Posts one event as the bot: a reply to the session's post where there is
+ * one, a new post with RSVP buttons for session news, a plain post otherwise. */
+async function postViaBot(input: {
+  type: NotificationType;
+  channelId: string;
+  sessionId: string | null;
+  embed: DiscordEmbed;
+  content?: string;
+  mentionDiscordIds: string[];
+}) {
+  const { type, channelId, sessionId, embed, content, mentionDiscordIds } = input;
+  if (sessionId && REPLY_TYPES.includes(type)) {
+    if (await replyToSessionMessage({ channelId, sessionId, embed, content, mentionDiscordIds })) return;
+  }
+  if (sessionId && RSVP_BUTTON_TYPES.includes(type)) {
+    await postSessionMessage({ channelId, sessionId, embed, content, mentionDiscordIds });
+  } else {
+    await postChannelMessage({ channelId, embed, content, mentionDiscordIds });
+  }
+}
 
 // Fallback embed color per event type, used whenever a call site doesn't
 // supply its own override (e.g. RSVP_CHANGED's Yes/No-specific color).
@@ -116,12 +147,14 @@ async function notifyDiscord(
       footer: { text: campaign.name },
       timestamp,
     };
-    const channelId = campaign.discordChannelId!;
-    if (sessionId && RSVP_BUTTON_TYPES.includes(input.type)) {
-      void postSessionMessage({ channelId, sessionId, embed, content, mentionDiscordIds });
-    } else {
-      void postChannelMessage({ channelId, embed, content, mentionDiscordIds });
-    }
+    void postViaBot({
+      type: input.type,
+      channelId: campaign.discordChannelId!,
+      sessionId,
+      embed,
+      content,
+      mentionDiscordIds,
+    });
     return;
   }
 

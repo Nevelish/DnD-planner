@@ -1,5 +1,5 @@
 import "server-only";
-import { Prisma } from "@prisma/client";
+import { Prisma, type NotificationType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { getRequestOrigin } from "@/lib/requestOrigin";
@@ -28,6 +28,12 @@ export type Interaction = {
 const InteractionType = { PING: 1, COMMAND: 2, COMPONENT: 3, MODAL_SUBMIT: 5 } as const;
 const Callback = { PONG: 1, MESSAGE: 4, UPDATE_MESSAGE: 7, MODAL: 9 } as const;
 const EPHEMERAL = 1 << 6;
+
+/** Events that stop being posted when a campaign connects the bot: the
+ * session post shows answers itself, and the rest is chatter for a game
+ * channel. Everyone still gets them in the app, and the DM can switch any
+ * back on in the campaign's settings. */
+const QUIET_WITH_BOT: NotificationType[] = ["RSVP_CHANGED", "MEMBER_JOINED", "MEMBER_LEFT", "RECURRING_DRAFT_READY"];
 
 const LABEL: Record<RsvpAnswer, string> = { YES: "I'm in", MAYBE: "Maybe", NO: "Can't make it" };
 
@@ -119,7 +125,7 @@ async function dmCampaignsOf(discordId: string) {
   if (!user || user.disabled) return null;
   return prisma.campaignMember.findMany({
     where: { userId: user.id, role: "DM" },
-    select: { campaign: { select: { id: true, name: true, discordChannelId: true } } },
+    select: { campaign: { select: { id: true, name: true, discordChannelId: true, discordWebhookEvents: true } } },
     orderBy: { joinedAt: "asc" },
     take: 25,
   });
@@ -157,13 +163,24 @@ async function connectClick(interaction: Interaction, campaignId: string) {
   if (!campaign || !interaction.channel_id) {
     return { type: Callback.UPDATE_MESSAGE, data: { content: "Only the campaign's DM can do that.", components: [] } };
   }
-  await prisma.campaign.update({ where: { id: campaign.id }, data: { discordChannelId: interaction.channel_id } });
+  const firstConnect = !campaign.discordChannelId;
+  await prisma.campaign.update({
+    where: { id: campaign.id },
+    data: {
+      discordChannelId: interaction.channel_id,
+      // Moving to another channel keeps whatever the DM has chosen since.
+      ...(firstConnect
+        ? { discordWebhookEvents: campaign.discordWebhookEvents.filter((t) => !QUIET_WITH_BOT.includes(t)) }
+        : {}),
+    },
+  });
   return {
     type: Callback.UPDATE_MESSAGE,
     data: {
       content:
-        `Done! **${campaign.name}** will post here from now on, and session posts get RSVP buttons. ` +
-        "Choose which events get posted, and who can join from Discord, in the campaign's settings on the planner.",
+        `Done! **${campaign.name}** will post here from now on. Session posts get RSVP buttons and keep ` +
+        "track of who's coming, and updates to a session are posted as replies to it. Choose which events get " +
+        "posted, and who can join from Discord, in the campaign's settings on the planner.",
       components: [],
     },
   };

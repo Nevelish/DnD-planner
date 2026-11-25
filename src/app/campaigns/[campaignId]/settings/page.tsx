@@ -87,7 +87,8 @@ export default async function CampaignSettingsPage({
           {botConnected && (
             <CardDescription>
               The Discord bot is posting for this campaign, so the webhook URL isn&apos;t used. The
-              events you pick here still decide what gets posted.
+              events you pick here still decide what gets posted. Session posts show everyone&apos;s
+              answers themselves, and updates to a session are posted as replies to it.
             </CardDescription>
           )}
         </CardHeader>

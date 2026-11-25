@@ -42,6 +42,10 @@ const rsvpOf = (email: string) =>
 const posts = () => discord.requests.filter((r) => r.method === "POST" && r.path === `/channels/${CHANNEL}/messages`);
 const edits = () => discord.requests.filter((r) => r.method === "PATCH" && r.path.startsWith(`/channels/${CHANNEL}/messages/`));
 const lastEditFields = () => JSON.stringify((edits().at(-1)?.body?.embeds as { fields: unknown }[] | undefined)?.[0]?.fields ?? []);
+const lastEditEmbed = () => JSON.stringify((edits().at(-1)?.body?.embeds as unknown[] | undefined)?.[0] ?? {});
+/** Posts that reply to the session's own post. */
+const replies = () => posts().filter((r) => r.body?.message_reference);
+const originalMessageId = () => sql(`SELECT "messageId" FROM "DiscordSessionMessage" WHERE "sessionProposalId" = '${sessionId}'`);
 
 /** The content of a private reply, and the URL on its link button, if any. */
 function reply(json: { type: number; data: { content: string; flags: number; components?: { components: { url?: string }[] }[] } }) {
@@ -103,6 +107,10 @@ test("only the campaign's DM can connect it to a channel", async ({ request }) =
   expect(done.type).toBe(7);
   expect(done.data.content).toContain("Done!");
   expect(sql(`SELECT "discordChannelId" FROM "Campaign"`)).toBe(CHANNEL);
+  // Quieter defaults: answers show on the session post instead.
+  const events = sql(`SELECT "discordWebhookEvents" FROM "Campaign"`);
+  expect(events).toContain("SESSION_PROPOSED");
+  for (const quiet of ["RSVP_CHANGED", "MEMBER_JOINED", "MEMBER_LEFT"]) expect(events).not.toContain(quiet);
 });
 
 test("session posts come from the bot, with RSVP buttons", async () => {
@@ -120,6 +128,12 @@ test("session posts come from the bot, with RSVP buttons", async () => {
   const buttons = JSON.stringify(post.components);
   for (const status of ["YES", "MAYBE", "NO"]) expect(buttons).toContain(`rsvp:${sessionId}:${status}`);
   expect(JSON.stringify(post.embeds)).toContain("No reply yet (2)");
+  // A card for the session, under what was announced, with the time in a
+  // Discord timestamp (shown in each reader's own timezone).
+  const embed = (post.embeds as { author: { name: string }; title: string; description: string }[])[0];
+  expect(embed.author.name).toBe("New session proposed");
+  expect(embed.title).toBe("Session 2: Into the Woods");
+  expect(embed.description).toMatch(/^<t:\d+:F> \(<t:\d+:R>\)\nProposed: answer below/);
   await expect.poll(() => sql(`SELECT count(*) FROM "DiscordSessionMessage" WHERE "sessionProposalId" = '${sessionId}'`)).toBe("1");
 });
 
@@ -128,6 +142,7 @@ test("a linked player answers from Discord, and the post updates", async ({ requ
   expect(answer.content).toContain("You're down as **I'm in** for **Session 2: Into the Woods**");
   expect(rsvpOf(PLAYER1)).toBe("YES|");
   await expect.poll(lastEditFields).toContain('"name":"Going (1)","value":"Percy Player"');
+  expect(posts()).toHaveLength(1); // no separate "Percy RSVP'd Yes" post
 });
 
 test("backing out after a Yes asks for a reason", async ({ request }) => {
@@ -140,6 +155,30 @@ test("backing out after a Yes asks for a reason", async ({ request }) => {
   expect(done.content).toContain("Can't make it");
   expect(rsvpOf(PLAYER1)).toBe("NO|Work trip, sorry");
   await expect.poll(lastEditFields).toContain('"name":"Can\'t make it (1)","value":"Percy Player"');
+});
+
+test("moving and confirming the session reply to its post, and update it", async () => {
+  const originalId = originalMessageId();
+  const startsAt = () => sql(`SELECT extract(epoch FROM "startsAt")::bigint FROM "SessionProposal" WHERE id = '${sessionId}'`);
+
+  await go(dm, `/campaigns/${cid}/sessions/${sessionId}`);
+  await dm.getByRole("button", { name: "Edit" }).click();
+  await dm.fill("#startsAt", futureDate(4, "19:00"));
+  await dm.getByRole("dialog").getByRole("button", { name: "Save" }).click();
+  await expect(dm.getByRole("dialog")).toHaveCount(0);
+
+  await expect.poll(() => replies().length).toBe(1);
+  const moved = replies()[0].body!;
+  expect((moved.message_reference as { message_id: string }).message_id).toBe(originalId);
+  expect(JSON.stringify(moved.embeds)).toContain("Session time changed");
+  expect(moved.components).toBeUndefined(); // the buttons stay on the original
+  await expect.poll(lastEditEmbed).toContain(`<t:${startsAt()}:F>`); // the original shows the new time
+
+  await dm.getByRole("button", { name: "Lock it in" }).click();
+  await expect.poll(() => replies().length).toBe(2);
+  expect(JSON.stringify(replies()[1].body!.embeds)).toContain("Session confirmed");
+  await expect.poll(lastEditEmbed).toContain("**Confirmed**: it's on!");
+  expect(posts()).toHaveLength(3); // the original and two replies, nothing else
 });
 
 test.describe("someone who isn't in the campaign", () => {
@@ -216,7 +255,8 @@ test("cancelling the session takes the buttons off its post", async () => {
   await dm.getByRole("dialog").getByRole("button", { name: "Cancel session" }).click();
   await expect(dm.getByRole("dialog")).toHaveCount(0);
   await expect.poll(() => JSON.stringify(edits().at(-1)?.body?.components)).toBe("[]");
-  expect(lastEditFields()).toContain("This session was cancelled.");
+  expect(lastEditEmbed()).toContain("**Cancelled**");
+  await expect.poll(() => JSON.stringify(replies().at(-1)?.body?.embeds)).toContain("Session cancelled");
 });
 
 test("disconnecting hands posting back to the webhook", async () => {

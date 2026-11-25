@@ -5,8 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { discordApi } from "@/lib/discord/api";
 import { groupDay, loadCampaignAway } from "@/lib/away";
 import { awayOn } from "@/lib/awayDays";
+import { describePlace } from "@/lib/sessionPlace";
 
 export type DiscordEmbed = {
+  author?: { name: string };
   title: string;
   description?: string;
   url?: string;
@@ -37,18 +39,31 @@ function rsvpButtons(sessionId: string, url?: string) {
 
 const LINE = { YES: "Going", MAYBE: "Maybe", NO: "Can't make it" } as const;
 
-/** Who's answered what, as embed fields: names per answer, plus who hasn't
- * replied (or is away that day). */
-async function rsvpFields(sessionId: string) {
+const STATUS_COLOR = { PROPOSED: 0x3a7ca5, CONFIRMED: 0x57a64a, CANCELLED: 0xd9534f, COMPLETED: 0x8a8a8a } as const;
+
+/** Discord renders <t:…> in each reader's own timezone and language. */
+const at = (date: Date, style: "F" | "R") => `<t:${Math.floor(date.getTime() / 1000)}:${style}>`;
+
+/**
+ * A bot post about a session, as it should look right now: what was
+ * announced (e.g. "New session proposed") above the session's current
+ * title, time, status and place, then who's answered what. Built fresh each
+ * time, so a reschedule or confirmation shows on the original post.
+ */
+async function sessionCard(sessionId: string, announcement: Pick<DiscordEmbed, "title" | "url">) {
   const session = await prisma.sessionProposal.findUnique({
     where: { id: sessionId },
     select: {
+      title: true,
       status: true,
       startsAt: true,
+      format: true,
+      location: true,
       campaignId: true,
       rsvps: { select: { status: true, memberId: true } },
       campaign: {
         select: {
+          name: true,
           members: {
             where: { role: "PLAYER" },
             orderBy: { joinedAt: "asc" },
@@ -77,7 +92,26 @@ async function rsvpFields(sessionId: string) {
   }));
   if (groups.PENDING.length) fields.push({ name: `No reply yet (${groups.PENDING.length})`, value: groups.PENDING.join(", "), inline: false });
   if (groups.AWAY.length) fields.push({ name: `Away (${groups.AWAY.length})`, value: groups.AWAY.join(", "), inline: false });
-  return { fields, open: session.status === "PROPOSED" || session.status === "CONFIRMED", status: session.status };
+
+  const status = session.status as keyof typeof STATUS_COLOR | "DRAFT";
+  const lines = [`${at(session.startsAt, "F")} (${at(session.startsAt, "R")})`];
+  if (status === "PROPOSED") lines.push("Proposed: answer below so the DM knows who's in.");
+  if (status === "CONFIRMED") lines.push("**Confirmed**: it's on!");
+  if (status === "CANCELLED") lines.push("**Cancelled**");
+  if (status === "COMPLETED") lines.push("Played");
+  const place = describePlace(session.format, session.location);
+  if (place) lines.push(place);
+
+  const embed: DiscordEmbed = {
+    author: { name: announcement.title },
+    title: session.title || "Next session",
+    url: announcement.url,
+    description: lines.join("\n"),
+    color: status === "DRAFT" ? STATUS_COLOR.PROPOSED : STATUS_COLOR[status],
+    footer: { text: session.campaign.name },
+    fields,
+  };
+  return { embed, open: status === "PROPOSED" || status === "CONFIRMED" };
 }
 
 /**
@@ -92,12 +126,12 @@ export async function postSessionMessage(input: {
   content?: string;
   mentionDiscordIds?: string[];
 }) {
-  const rsvp = await rsvpFields(input.sessionId);
-  if (!rsvp) return;
+  const card = await sessionCard(input.sessionId, input.embed);
+  if (!card) return;
   const message = await discordApi<DiscordMessage>("POST", `/channels/${input.channelId}/messages`, {
     content: input.content || undefined,
-    embeds: [{ ...input.embed, fields: rsvp.fields }],
-    components: rsvp.open ? rsvpButtons(input.sessionId, input.embed.url) : [],
+    embeds: [card.embed],
+    components: card.open ? rsvpButtons(input.sessionId, input.embed.url) : [],
     allowed_mentions: { parse: [], users: input.mentionDiscordIds ?? [] },
   });
   if (!message?.id) return;
@@ -126,28 +160,49 @@ export async function postChannelMessage(input: {
 }
 
 /**
- * Brings every bot post about a session up to date: the latest answers,
- * and no buttons once the session is cancelled or has been played.
- * Fire-and-forget from anywhere that changes RSVPs or the session.
+ * Brings every bot post about a session up to date: its time, status and
+ * place, the latest answers, and no buttons once the session is cancelled
+ * or has been played. Fire-and-forget from anywhere that changes RSVPs or
+ * the session.
  */
 export async function refreshSessionMessages(sessionId: string) {
   const messages = await prisma.discordSessionMessage.findMany({ where: { sessionProposalId: sessionId } });
-  if (messages.length === 0) return;
-  const rsvp = await rsvpFields(sessionId);
-  if (!rsvp) return;
-  const closedNote =
-    rsvp.status === "CANCELLED" ? "This session was cancelled." : rsvp.status === "COMPLETED" ? "This session has been played." : null;
-
   await Promise.all(
-    messages.map((m) => {
-      const embed = m.embed as DiscordEmbed;
-      const fields = closedNote ? [{ name: "Closed", value: closedNote, inline: false }, ...rsvp.fields] : rsvp.fields;
-      return discordApi("PATCH", `/channels/${m.channelId}/messages/${m.messageId}`, {
-        embeds: [{ ...embed, fields }],
-        components: rsvp.open ? rsvpButtons(sessionId, embed.url) : [],
+    messages.map(async (m) => {
+      const card = await sessionCard(sessionId, m.embed as DiscordEmbed);
+      if (!card) return;
+      await discordApi("PATCH", `/channels/${m.channelId}/messages/${m.messageId}`, {
+        embeds: [card.embed],
+        components: card.open ? rsvpButtons(sessionId, (m.embed as DiscordEmbed).url) : [],
       });
     }),
   );
+}
+
+/**
+ * Posts an update about a session (moved, confirmed, cancelled, a reminder)
+ * as a reply to the bot's post about it in this channel, so everything about
+ * one session stays together. Returns false if there's no post to reply to.
+ */
+export async function replyToSessionMessage(input: {
+  channelId: string;
+  sessionId: string;
+  embed: DiscordEmbed;
+  content?: string;
+  mentionDiscordIds?: string[];
+}) {
+  const original = await prisma.discordSessionMessage.findFirst({
+    where: { sessionProposalId: input.sessionId, channelId: input.channelId },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!original) return false;
+  await discordApi("POST", `/channels/${input.channelId}/messages`, {
+    content: input.content || undefined,
+    embeds: [input.embed],
+    message_reference: { message_id: original.messageId, channel_id: input.channelId, fail_if_not_exists: false },
+    allowed_mentions: { parse: [], users: input.mentionDiscordIds ?? [], replied_user: false },
+  });
+  return true;
 }
 
 /** The session id in an in-app link like /campaigns/abc/sessions/xyz. */

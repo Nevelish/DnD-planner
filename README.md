@@ -264,7 +264,13 @@ internet, so the planner must be reachable at a public `https://` address
    and keep signing in with email. The two email addresses don't have to match.
 
 From then on that campaign's posts come from the bot instead of the webhook,
-using the same event choices, and session posts get RSVP buttons. Players
+and session posts get RSVP buttons. Each session has one post that keeps
+itself up to date: its time (shown in each reader's own timezone), whether
+it's confirmed, where it is, and who's answered what. When a session is
+moved, confirmed, cancelled or coming up tomorrow, the bot replies to that
+post rather than starting a new one. Connecting also switches off posts for
+each RSVP, members joining or leaving, and recurring drafts, since the
+session post covers those; the DM can turn any back on in Settings. Players
 whose planner account is linked to Discord can answer right away. Anyone else
 gets a private link to join with their Discord account once, unless the DM
 turns on **Let anyone in the channel join by answering** in Settings.
