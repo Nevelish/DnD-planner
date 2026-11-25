@@ -1,4 +1,5 @@
 import "server-only";
+import { randomBytes } from "node:crypto";
 import sharp from "sharp";
 
 import { prisma } from "@/lib/prisma";
@@ -138,4 +139,32 @@ export async function loadPictureInventory(campaignId: string) {
     usedBytes: shownBytes + privateBytes,
     limitBytes: MAX_STORED_BYTES_PER_CAMPAIGN,
   };
+}
+
+/**
+ * For a page the DM is revealing: gives every DM-notebook picture in the text
+ * a copy in the party notebook, and points the text at the copies. The DM's
+ * originals stay DM-only, and deleting one later doesn't break the party's
+ * page. Pictures from elsewhere are left as they are.
+ */
+export async function sharePicturesWithParty(campaignId: string, content: string) {
+  const ids = [...new Set([...content.matchAll(/\/api\/notebook-images\/([a-z0-9]+)/gi)].map((m) => m[1]))];
+  if (ids.length === 0) return content;
+  const dmPictures = await prisma.notebookImage.findMany({
+    where: { id: { in: ids }, campaignId, kind: "DM" },
+    select: { id: true, size: true },
+  });
+  await checkCampaignImageSpace(campaignId, dmPictures.reduce((sum, p) => sum + p.size, 0));
+
+  let shared = content;
+  for (const picture of dmPictures) {
+    const copyId = `c${randomBytes(12).toString("hex")}`;
+    // Copied inside the database, so the picture never passes through here.
+    await prisma.$executeRaw`
+      INSERT INTO "NotebookImage" (id, "campaignId", kind, "ownerId", "uploadedById", data, width, height, size, "createdAt")
+      SELECT ${copyId}, "campaignId", 'PARTY', NULL, "uploadedById", data, width, height, size, now()
+      FROM "NotebookImage" WHERE id = ${picture.id}`;
+    shared = shared.split(notebookImageUrl(picture.id)).join(notebookImageUrl(copyId));
+  }
+  return shared;
 }

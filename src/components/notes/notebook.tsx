@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
+  EyeIcon,
   FilePlusIcon,
   LinkIcon,
   PinIcon,
@@ -39,6 +40,7 @@ import {
 } from "@/components/ui/dialog";
 import { NotesEditor } from "@/components/notes/notes-editor";
 import { NotebookMarkdown, type LinkablePage } from "@/components/notes/notebook-markdown";
+import { RevealDialog } from "@/components/notes/reveal-dialog";
 import { errorMessage } from "@/lib/userError";
 
 export type NotebookPage = {
@@ -63,6 +65,10 @@ export type NotebookSelected = NotebookPage & {
   startInEdit: boolean;
   /** False for shared party pages someone else made (unless you're the DM). */
   canDelete: boolean;
+  /** A DM page that's been revealed: the party's copy. */
+  reveal: { partyPageId: string; partyTitle: string; revealedOn: string; editedSince: boolean } | null;
+  /** A party page the DM revealed, and when. */
+  revealedOn: string | null;
 };
 
 /** Which notebook a Notebook shows, for wording and templates. */
@@ -221,6 +227,7 @@ export function Notebook({
   selected,
   search,
   linkablePages,
+  partyTitles,
 }: {
   campaignId: string;
   /** Which of the viewer's notebooks this is; the server decides the rest. */
@@ -231,12 +238,16 @@ export function Notebook({
   search: NotebookSearch | null;
   /** Pages a [[link]] can point at (not session prep). */
   linkablePages: LinkablePage[];
+  /** DM notebook only: the party notebook's page titles, for "Reveal to party". */
+  partyTitles?: string[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const [dirty, setDirty] = useState(false);
   const [isPending, startTransition] = useTransition();
   const onDirtyChange = useCallback((d: boolean) => setDirty(d), []);
+  const [revealing, setRevealing] = useState(false);
+  const canReveal = kind === "dm" && !!partyTitles;
 
   const hrefFor = (id: string) => `${pathname}?page=${id}`;
   const confirmLeave = () => !dirty || window.confirm(DISCARD);
@@ -440,6 +451,19 @@ export function Notebook({
                   {selected.pinned ? "Unpin" : "Pin"}
                 </Button>
               )}
+              {canReveal && !selected.sessionHref && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={isPending}
+                  onClick={() => {
+                    if (dirty) toast.error("Save your changes first, then reveal the page.");
+                    else setRevealing(true);
+                  }}
+                >
+                  <EyeIcon /> {selected.reveal ? "Update party's copy" : "Reveal to party"}
+                </Button>
+              )}
               {selected.canDelete && (
                 <Button
                   size="sm"
@@ -462,6 +486,37 @@ export function Notebook({
                 </Button>
               )}
             </div>
+            {selected.reveal && (
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md bg-muted px-3 py-2 text-sm">
+                <EyeIcon className="size-4 text-muted-foreground" aria-hidden />
+                <span>
+                  Revealed to the party on {selected.reveal.revealedOn}
+                  {selected.reveal.editedSince ? ", and they've edited their copy since" : ""}.
+                </span>
+                <Link
+                  href={`/campaigns/${campaignId}/notes/party?page=${selected.reveal.partyPageId}`}
+                  onClick={onNavigate}
+                  className="font-medium underline underline-offset-2"
+                >
+                  Open their copy
+                </Link>
+              </p>
+            )}
+            {selected.revealedOn && (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <EyeIcon className="size-4" aria-hidden /> Revealed by the DM on {selected.revealedOn}.
+              </p>
+            )}
+            {revealing && partyTitles && (
+              <RevealDialog
+                campaignId={campaignId}
+                page={{ id: selected.id, title: selected.title, content: selected.content }}
+                partyTitles={partyTitles}
+                existing={selected.reveal}
+                open={revealing}
+                onOpenChange={setRevealing}
+              />
+            )}
             <NotesEditor
               key={selected.id}
               initialContent={selected.content}

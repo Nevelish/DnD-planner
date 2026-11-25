@@ -79,6 +79,7 @@ const DEFAULT_DISCORD_EMBED_COLORS: Record<NotificationType, number> = {
   SESSION_REMINDER: 0x6c8ebf,
   DATE_POLL_OPENED: 0x8e6fbd,
   RECAP_POSTED: 0x6c8ebf,
+  PAGE_REVEALED: 0xb87e40,
   // Never posted (not a webhook toggle), but the map covers every type.
   SAFETY_TOOL_ADDED: 0xd9822b,
   RSVP_CHANGED: 0xb87e40,

@@ -70,6 +70,29 @@ export function wikiLinkTargets(markdown: string): Set<string> {
   return targets;
 }
 
+/** The page titles this markdown links to, as first written, once each. */
+export function wikiLinkTitles(markdown: string): string[] {
+  const titles = new Map<string, string>();
+  mapOutsideCode(markdown, (text) => {
+    for (const m of text.matchAll(WIKI_LINK)) {
+      if (!titles.has(normalizeTitle(m[1]))) titles.set(normalizeTitle(m[1]), m[1].trim());
+    }
+    return text;
+  });
+  return [...titles.values()];
+}
+
+/** Turns links into plain text (their shown text), except links to the
+ * titles in `keep` (normalised). Used when the DM reveals a page, so links
+ * to pages the party can't see don't give away their titles. */
+export function unlinkWikiLinks(markdown: string, keep: Set<string>): string {
+  return mapOutsideCode(markdown, (text) =>
+    text.replace(WIKI_LINK, (match, target: string, label?: string) =>
+      keep.has(normalizeTitle(target)) ? match : (label ?? target).trim(),
+    ),
+  );
+}
+
 /** Points links at a renamed page's new title, keeping any custom text. */
 export function renameWikiLinks(markdown: string, oldTitle: string, newTitle: string): string {
   const old = normalizeTitle(oldTitle);
