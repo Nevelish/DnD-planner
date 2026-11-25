@@ -19,6 +19,23 @@ export type CalendarSession = {
   status: "PROPOSED" | "CONFIRMED" | "COMPLETED";
 };
 
+/** Someone's away dates, shown as an all-day bar. */
+export type CalendarAway = {
+  key: string;
+  title: string;
+  startsOn: string; // YYYY-MM-DD
+  endsOn: string; // YYYY-MM-DD, inclusive
+  mine: boolean;
+};
+
+/** Midnight at the start of a "YYYY-MM-DD" day, in the browser's timezone. */
+function startOfDay(day: string, addDays = 0) {
+  const [year, month, date] = day.split("-").map(Number);
+  return new Date(year, month - 1, date + addDays);
+}
+
+type CalendarEvent = Event & { session?: CalendarSession; away?: CalendarAway };
+
 const EVENT_CLASS: Record<CalendarSession["status"], string> = {
   PROPOSED: "rbc-event-proposed",
   CONFIRMED: "rbc-event-confirmed",
@@ -27,9 +44,11 @@ const EVENT_CLASS: Record<CalendarSession["status"], string> = {
 
 export function CampaignCalendar({
   sessions,
+  away = [],
   weekStartsOn,
 }: {
   sessions: CalendarSession[];
+  away?: CalendarAway[];
   weekStartsOn: 0 | 1;
 }) {
   const router = useRouter();
@@ -46,33 +65,47 @@ export function CampaignCalendar({
     [weekStartsOn],
   );
 
-  const events: (Event & { resource: CalendarSession })[] = sessions.map((s) => {
+  const awayEvents: CalendarEvent[] = away.map((a) => ({
+    title: a.title,
+    start: startOfDay(a.startsOn),
+    end: startOfDay(a.endsOn, 1),
+    allDay: true,
+    away: a,
+  }));
+
+  const sessionEvents: CalendarEvent[] = sessions.map((s) => {
     const start = new Date(s.startsAt);
     const end = new Date(start.getTime() + (s.durationMinutes ?? 180) * 60_000);
     return {
       title: `${s.title || "Session"} — ${s.campaignName}`,
       start,
       end,
-      resource: s,
+      session: s,
     };
   });
 
   return (
     <div className="h-[70vh] rounded-lg border bg-card p-2">
-      <Calendar
+      <Calendar<CalendarEvent>
         localizer={localizer}
-        events={events}
+        events={[...awayEvents, ...sessionEvents]}
         startAccessor="start"
         endAccessor="end"
         views={["month"]}
         defaultView="month"
-        onSelectEvent={(event) =>
-          router.push(
-            `/campaigns/${event.resource.campaignId}/sessions/${event.resource.id}`,
-          )
-        }
-        eventPropGetter={(event) => ({
-          className: EVENT_CLASS[(event.resource as CalendarSession).status],
+        onSelectEvent={(event: CalendarEvent) => {
+          if (event.session) {
+            router.push(`/campaigns/${event.session.campaignId}/sessions/${event.session.id}`);
+          }
+        }}
+        eventPropGetter={(event: CalendarEvent) => ({
+          className: event.away
+            ? event.away.mine
+              ? "rbc-event-away rbc-event-away-mine"
+              : "rbc-event-away"
+            : event.session
+              ? EVENT_CLASS[event.session.status]
+              : undefined,
         })}
       />
     </div>

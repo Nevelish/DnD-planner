@@ -28,6 +28,11 @@ import, and in-app notifications.
   work, anyone can suggest another date (they're counted as a Yes, and
   everyone who already voted is asked about it). Picking a date proposes
   the session with everyone's RSVP pre-filled from their vote.
+- **Away dates**: on the Calendar page, mark days you can't play (a holiday,
+  exams), with an optional note. Everyone in your campaigns sees them on
+  their calendar. The DM is warned when proposing a session or offering a
+  poll date that clashes, and polls and RSVP lists show who's away instead
+  of "no reply". Nothing is declined automatically.
 - **Session recaps**: once a session has been played, anyone in the party
   can write up what happened (markdown). The latest one shows as "Previously
   on…" on the campaign overview, and the campaign log collects them all, so

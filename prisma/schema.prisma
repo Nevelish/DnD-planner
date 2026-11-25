@@ -61,6 +61,7 @@ model User {
   addedPollDates    DatePollOption[]  @relation("PollOptionAddedBy")
   recapsEdited      SessionProposal[] @relation("RecapAuthor")
   avatar            UserAvatar?
+  awayPeriods       AwayPeriod[]
   notebookPages     NotebookPage[]    @relation("NotebookPages")
   notebookPagesMade NotebookPage[]    @relation("NotebookPagesCreated")
   safetyEntries     SafetyEntry[]
@@ -476,4 +477,20 @@ model NotebookPage {
   @@index([campaignId, updatedAt])
   @@index([campaignId, kind, ownerId])
   @@map("DmPage")
+}
+
+/// Days someone can't play (a holiday, exams). Belongs to the person, not a
+/// campaign, so every campaign they're in sees it. The days are calendar
+/// dates in the group's timezone (the server's TZ), like the reminders.
+model AwayPeriod {
+  id        String   @id @default(cuid())
+  userId    String
+  startsOn  DateTime @db.Date
+  endsOn    DateTime @db.Date // inclusive
+  note      String? // optional short reason, shown to the people they play with
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, endsOn])
 }

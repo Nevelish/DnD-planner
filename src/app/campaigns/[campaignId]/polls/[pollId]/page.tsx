@@ -21,6 +21,8 @@ import { CancelPollButton } from "@/components/polls/cancel-poll-button";
 import { AddPollDateForm } from "@/components/polls/add-poll-date-form";
 import { RemovePollDateButton } from "@/components/polls/remove-poll-date-button";
 import { MAX_POLL_OPTIONS } from "@/lib/validations/poll";
+import { groupDay, loadCampaignAway } from "@/lib/away";
+import { awayName, awayOn } from "@/lib/awayDays";
 
 const statusBadge = {
   OPEN: { label: "Voting open", variant: "secondary" },
@@ -44,7 +46,7 @@ export default async function DatePollPage({
   const { userId, membership } = await requireMembershipForPage(campaignId);
   const isDM = membership.role === "DM";
 
-  const [poll, players, prefs] = await Promise.all([
+  const [poll, players, prefs, away] = await Promise.all([
     prisma.datePoll.findFirst({
       where: { id: pollId, campaignId },
       include: {
@@ -61,17 +63,31 @@ export default async function DatePollPage({
       orderBy: { joinedAt: "asc" },
     }),
     getDateTimePrefs(userId),
+    loadCampaignAway(campaignId),
   ]);
   if (!poll) notFound();
 
   const playerIds = players.map((p) => p.id);
   const nameOf = new Map(players.map((p) => [p.id, p.user.name ?? p.user.email ?? "Unknown"]));
-  const options = poll.options.map((o) => ({
-    ...o,
-    tally: tallyOption(o.votes, playerIds),
-    label: formatSessionDateTimeForUser(o.startsAt, prefs),
-    isPast: isPast(o.startsAt),
-  }));
+  const memberOfUser = new Map(players.map((p) => [p.userId, p.id]));
+  const options = poll.options.map((o) => {
+    const tally = tallyOption(o.votes, playerIds);
+    // Players away that day who haven't answered are listed as away rather
+    // than under "No reply". Anyone who did answer keeps their answer.
+    const awayUnanswered = awayOn(away, groupDay(o.startsAt)).filter((a) => {
+      const memberId = memberOfUser.get(a.userId);
+      return memberId !== undefined && tally.noReply.includes(memberId);
+    });
+    const awayMemberIds = new Set(awayUnanswered.map((a) => memberOfUser.get(a.userId)));
+    tally.noReply = tally.noReply.filter((id) => !awayMemberIds.has(id));
+    return {
+      ...o,
+      tally,
+      away: awayUnanswered,
+      label: formatSessionDateTimeForUser(o.startsAt, prefs),
+      isPast: isPast(o.startsAt),
+    };
+  });
   const bestId = poll.status === "OPEN" ? bestOptionId(options) : null;
   const votedCount = players.filter((p) =>
     poll.options.some((o) => o.votes.some((v) => v.memberId === p.id)),
@@ -160,6 +176,12 @@ export default async function DatePollPage({
                         <dd>{option.tally[g.key].map((id) => nameOf.get(id)).join(", ")}</dd>
                       </div>
                     ))}
+                    {option.away.length > 0 && (
+                      <div className="flex gap-1">
+                        <dt className="font-medium text-foreground">Away:</dt>
+                        <dd>{option.away.map(awayName).join(", ")}</dd>
+                      </div>
+                    )}
                   </dl>
                 </div>
                 {isOpen && !option.isPast && (

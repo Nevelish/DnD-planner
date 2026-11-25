@@ -26,6 +26,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { errorMessage } from "@/lib/userError";
+import { AwayWarning } from "@/components/sessions/away-warning";
+import type { AwayRange } from "@/lib/awayDays";
 
 type Mode = "create" | "edit" | "publish";
 type ProposalDefaults = {
@@ -57,10 +59,12 @@ const DEFAULT_DURATION_MINUTES = 180;
  */
 function ProposalFormFields({
   defaultValues,
+  away,
   onSubmit,
   isPending,
 }: {
   defaultValues?: ProposalDefaults;
+  away: AwayRange[];
   onSubmit: (formData: FormData) => void;
   isPending: boolean;
 }) {
@@ -128,6 +132,7 @@ function ProposalFormFields({
           />
         </div>
       </div>
+      <AwayWarning away={away} value={startsAt} />
       <fieldset className="flex flex-col gap-1.5">
         <legend className="mb-1.5 text-sm font-medium">Where are you playing?</legend>
         {/* Toggle buttons rather than radios so the DM can unset it again;
@@ -186,12 +191,15 @@ export function ProposeSessionDialog({
   proposalId,
   mode = "create",
   defaultValues,
+  away = [],
   trigger,
 }: {
   campaignId: string;
   proposalId?: string;
   mode?: Mode;
   defaultValues?: ProposalDefaults;
+  /** Players' away dates, to warn about a clash with the chosen day. */
+  away?: AwayRange[];
   trigger?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -242,6 +250,7 @@ export function ProposeSessionDialog({
         {open && (
           <ProposalFormFields
             defaultValues={defaultValues}
+            away={away}
             onSubmit={handleSubmit}
             isPending={isPending}
           />

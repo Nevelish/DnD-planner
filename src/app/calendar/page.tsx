@@ -5,6 +5,9 @@ import { ensureCalendarToken } from "@/lib/calendarToken";
 import { getRequestOrigin } from "@/lib/requestOrigin";
 import { getDateTimePrefs, weekStartsOnForUser } from "@/lib/sessionDateFormat";
 import { CampaignCalendar, type CalendarSession } from "@/components/calendar/campaign-calendar";
+import { AwayDatesCard } from "@/components/calendar/away-dates-card";
+import { dayOf, groupToday } from "@/lib/away";
+import { formatDayRange } from "@/lib/awayDays";
 import { completePastSessions } from "@/lib/completeSessions";
 import { SubscribeCalendarBox } from "@/components/calendar/subscribe-calendar-box";
 import {
@@ -46,6 +49,38 @@ export default async function CalendarPage() {
     orderBy: { startsAt: "asc" },
   });
 
+  // Your own away dates, and those of everyone you play with. Ones that ended
+  // a while ago are left out; the calendar rarely goes back that far.
+  const today = groupToday();
+  const since = new Date(today);
+  since.setUTCDate(since.getUTCDate() - 90);
+  const awayPeriods = await prisma.awayPeriod.findMany({
+    where: {
+      endsOn: { gte: since },
+      OR: [{ userId }, { user: { memberships: { some: { campaignId: { in: campaignIds } } } } }],
+    },
+    select: { id: true, userId: true, startsOn: true, endsOn: true, note: true, user: { select: { name: true, email: true } } },
+    orderBy: { startsOn: "asc" },
+  });
+  const away = awayPeriods.map((p) => {
+    const mine = p.userId === userId;
+    const who = mine ? "You're away" : `${p.user.name ?? p.user.email ?? "Someone"} away`;
+    return {
+      key: p.id,
+      title: p.note ? `${who}: ${p.note}` : who,
+      startsOn: dayOf(p.startsOn),
+      endsOn: dayOf(p.endsOn),
+      mine,
+    };
+  });
+  const myUpcoming = away
+    .filter((a) => a.mine && a.endsOn >= today)
+    .map((a) => ({
+      id: a.key,
+      label: formatDayRange(a.startsOn, a.endsOn, { monthFirst: prefs.dateFormat === "MDY" }),
+      note: awayPeriods.find((p) => p.id === a.key)?.note ?? null,
+    }));
+
   const sessions = proposals.map((p) => ({
     id: p.id,
     campaignId: p.campaignId,
@@ -61,7 +96,9 @@ export default async function CalendarPage() {
       <h1 className="mb-6 font-display text-2xl font-semibold tracking-tight">Calendar</h1>
 
       <div className="mb-6 flex flex-col gap-6">
-        <CampaignCalendar sessions={sessions} weekStartsOn={weekStartsOnForUser(prefs)} />
+        <CampaignCalendar sessions={sessions} away={away} weekStartsOn={weekStartsOnForUser(prefs)} />
+
+        <AwayDatesCard periods={myUpcoming} today={today} />
 
         <Card>
           <CardHeader>
