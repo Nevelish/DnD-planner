@@ -50,26 +50,40 @@ export default async function JoinFromDiscordPage({
     );
   }
 
-  const session = await prisma.sessionProposal.findFirst({
-    where: { id: data.sessionId, campaignId: data.campaignId },
-    select: { title: true, startsAt: true, campaign: { select: { name: true } } },
-  });
-  if (!session) {
+  // What they clicked: an RSVP for a session, or a poll's Vote button.
+  const [session, poll] = await Promise.all([
+    data.sessionId !== undefined
+      ? prisma.sessionProposal.findFirst({
+          where: { id: data.sessionId, campaignId: data.campaignId },
+          select: { title: true, startsAt: true, campaign: { select: { name: true } } },
+        })
+      : null,
+    data.pollId !== undefined
+      ? prisma.datePoll.findFirst({
+          where: { id: data.pollId, campaignId: data.campaignId },
+          select: { title: true, campaign: { select: { name: true } } },
+        })
+      : null,
+  ]);
+  const target = session ?? poll;
+  if (!target) {
     return (
-      <Message title="That session is gone">
+      <Message title={data.pollId !== undefined ? "That poll is gone" : "That session is gone"}>
         <p>It may have been deleted. Check the Discord channel for the latest one.</p>
       </Message>
     );
   }
+  const campaignName = target.campaign.name;
+  const outcome = session ? "your answer will be saved" : "you can vote on the dates";
 
   const here = `/discord/join?token=${token}`;
   const userId = await getCurrentUserId();
   if (!userId) {
     return (
-      <Message title={`Join ${session.campaign.name}`}>
+      <Message title={`Join ${campaignName}`}>
         <p>
           Continue with the Discord account you clicked the button with. You&apos;ll join the
-          campaign and your answer will be saved. After that, the buttons in Discord just work.
+          campaign and {outcome}. After that, the buttons in Discord just work.
         </p>
         <DiscordButton callbackUrl={here} />
         <p>
@@ -113,15 +127,25 @@ export default async function JoinFromDiscordPage({
       select: { id: true },
     }),
   ]);
+  if (!session) {
+    return (
+      <Message title={membership ? "Vote on the dates" : `Join ${campaignName}`}>
+        <CardDescription className="text-foreground">
+          <span className="font-medium">{poll?.title || "Find a date for the next session"}</span>
+        </CardDescription>
+        <JoinFromDiscordButton token={token} label={membership ? "Go to the poll" : "Join and vote"} />
+      </Message>
+    );
+  }
   return (
-    <Message title={membership ? "Save your answer" : `Join ${session.campaign.name}`}>
+    <Message title={membership ? "Save your answer" : `Join ${campaignName}`}>
       <CardDescription className="text-foreground">
         <span className="font-medium">{session.title || "Next session"}</span>
         <br />
         {formatSessionDateTimeForUser(session.startsAt, prefs)}
       </CardDescription>
       <p>
-        Your answer: <span className="font-medium text-foreground">{ANSWER[data.status]}</span>
+        Your answer: <span className="font-medium text-foreground">{ANSWER[data.status!]}</span>
       </p>
       <JoinFromDiscordButton
         token={token}

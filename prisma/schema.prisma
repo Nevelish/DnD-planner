@@ -253,10 +253,11 @@ model DatePoll {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
-  campaign        Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  createdBy       User             @relation("PollCreatedBy", fields: [createdById], references: [id])
-  sessionProposal SessionProposal? @relation(fields: [sessionProposalId], references: [id], onDelete: SetNull)
+  campaign        Campaign             @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  createdBy       User                 @relation("PollCreatedBy", fields: [createdById], references: [id])
+  sessionProposal SessionProposal?     @relation(fields: [sessionProposalId], references: [id], onDelete: SetNull)
   options         DatePollOption[]
+  discordMessages DiscordPollMessage[]
 
   @@index([campaignId, status])
 }
@@ -513,4 +514,21 @@ model DiscordSessionMessage {
 
   @@unique([channelId, messageId])
   @@index([sessionProposalId])
+}
+
+/// A Discord message the bot posted about a date poll, with a Vote button.
+/// Kept so the counts on it can be updated as people vote (on the site or in
+/// Discord), and the button removed once a date is picked.
+model DiscordPollMessage {
+  id        String   @id @default(cuid())
+  pollId    String
+  channelId String
+  messageId String
+  embed     Json // what was announced ("Which date works for you?"), for redrawing the post
+  createdAt DateTime @default(now())
+
+  poll DatePoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, messageId])
+  @@index([pollId])
 }

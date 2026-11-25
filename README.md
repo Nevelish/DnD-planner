@@ -63,9 +63,12 @@ import, and in-app notifications.
   each session, to the DM and everyone who hasn't said No, plus a
   calendar-app alert an hour before via the .ics feed. Set `TZ` (e.g.
   `Europe/Oslo`) so reminder times read in your group's timezone.
-- **RSVP from Discord** (optional bot): session posts in your Discord
-  channel get **I'm in / Maybe / Can't make it** buttons, and the answers on
-  the post stay up to date. Backing out after a Yes asks for a reason in a
+- **RSVP and vote from Discord** (optional bot): session posts in your
+  Discord channel get **I'm in / Maybe / Can't make it** buttons, and the
+  answers on the post stay up to date. Date polls get a **Vote** button that
+  opens a private panel with two lists, "dates that work for me" and "dates
+  that might work"; the poll's post shows everyone's votes and the best date
+  so far, and says which date was picked. Backing out after a Yes asks for a reason in a
   pop-up. Someone who isn't in the campaign yet gets a link to join once
   with their Discord account; or the DM can let anyone in the channel join
   just by answering. See [Discord bot](#discord-bot) below to set it up.
@@ -268,7 +271,10 @@ and session posts get RSVP buttons. Each session has one post that keeps
 itself up to date: its time (shown in each reader's own timezone), whether
 it's confirmed, where it is, and who's answered what. When a session is
 moved, confirmed, cancelled or coming up tomorrow, the bot replies to that
-post rather than starting a new one. Connecting also switches off posts for
+post rather than starting a new one. Date polls work the same way: one post
+per poll with a Vote button and live counts, dates suggested later posted as
+replies, and the post closed with a link to the session once a date is picked.
+Suggesting a new date stays on the website. Connecting also switches off posts for
 each RSVP, members joining or leaving, and recurring drafts, since the
 session post covers those; the DM can turn any back on in Settings. Players
 whose planner account is linked to Discord can answer right away. Anyone else

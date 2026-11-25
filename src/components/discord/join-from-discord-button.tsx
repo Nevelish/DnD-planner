@@ -15,13 +15,15 @@ export function JoinFromDiscordButton({ token, label }: { token: string; label: 
   function handleClick() {
     startTransition(async () => {
       try {
-        const { sessionUrl, saved } = await joinFromDiscord(token);
+        const { url, saved } = await joinFromDiscord(token);
         toast.success(
           saved
             ? "Done! Next time, the buttons in Discord just work."
-            : "You're in. Answer on the session page.",
+            : url.includes("/polls/")
+              ? "You're in! Vote here, or with the Vote button in Discord."
+              : "You're in. Answer on the session page.",
         );
-        router.push(sessionUrl);
+        router.push(url);
       } catch (e) {
         toast.error(errorMessage(e));
       }
