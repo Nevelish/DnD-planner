@@ -135,9 +135,10 @@ Install via YAML** using `docker-compose.truenas.yml` instead of
 rather than building `docker/Dockerfile` locally, since the Apps YAML
 importer deploys images, it doesn't build them.
 
-1. Push to `main` (or run the "Publish Docker image" workflow manually) —
-   `.github/workflows/docker-publish.yml` builds and pushes the image to
-   `ghcr.io/nevelish/dnd-planner` automatically. If the package ends up
+1. Push to `main` (or run the "CI" workflow manually on `main`):
+   `.github/workflows/ci.yml` runs the end-to-end tests and, only if they
+   pass, builds and pushes the image to `ghcr.io/nevelish/dnd-planner`. A
+   push whose tests fail publishes nothing. If the package ends up
    private (the default for a private repo), either make it public from the
    package's GitHub settings, or `docker login ghcr.io` on the TrueNAS host
    with a PAT that has `read:packages`.
@@ -193,7 +194,8 @@ change what (including forged requests), the scan for leaked secrets,
 scheduling and RSVPs, date polls, notebooks, recaps and the safety tools.
 
 They run on GitHub for every pull request and every push to `main`
-(`.github/workflows/e2e.yml`). To run them locally:
+(`.github/workflows/ci.yml`), and a new Docker image is only published once
+they pass on `main`. To run them locally:
 
 1. Create a separate, throwaway database. **The tests wipe it** before each
    test file, so never point them at real data:
