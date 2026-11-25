@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useTransition } from "react";
+import { createContext, useContext, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
@@ -12,6 +12,23 @@ import { linkifyWikiLinks, normalizeTitle, wikiTargetFromHref } from "@/lib/wiki
 import { errorMessage } from "@/lib/userError";
 
 export type LinkablePage = { id: string; title: string };
+
+// The source line of the checklist item being rendered, for its checkbox.
+const TaskLine = createContext<number | null>(null);
+
+function TaskCheckbox({ checked, onToggle }: { checked: boolean; onToggle?: (line: number) => void }) {
+  const line = useContext(TaskLine);
+  const clickable = !!onToggle && line !== null;
+  return (
+    <input
+      type="checkbox"
+      checked={checked}
+      disabled={!clickable}
+      onChange={() => clickable && onToggle(line)}
+      className={`me-1.5 align-middle ${clickable ? "cursor-pointer accent-primary" : ""}`}
+    />
+  );
+}
 
 /**
  * Markdown for DM notebook pages: like MarkdownRenderer, plus [[Page]]
@@ -25,6 +42,7 @@ export function NotebookMarkdown({
   confirmLeave,
   notebook = "mine",
   basePath,
+  onToggleTask,
 }: {
   campaignId: string;
   content: string;
@@ -35,6 +53,8 @@ export function NotebookMarkdown({
   notebook?: NotebookName;
   /** That notebook's page, e.g. /campaigns/x/notes or …/notes/party. */
   basePath?: string;
+  /** Makes checklist boxes clickable: called with the item's source line. */
+  onToggleTask?: (line: number) => void;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -69,10 +89,43 @@ export function NotebookMarkdown({
   }
 
   return (
-    <div className="prose prose-sm dark:prose-invert max-w-none">
+    // Checklists: the box replaces the bullet; nested ones still indent.
+    <div className="prose prose-sm dark:prose-invert max-w-none [&_li.task-list-item]:list-none [&_li_ul.contains-task-list]:ps-6 [&_ul.contains-task-list]:ps-1">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
+          // [[links]] become ordinary links before parsing, which changes
+          // lengths but never adds lines, so an item's line number is the
+          // same in the original text.
+          li({ node, children, className }) {
+            const line = className?.includes("task-list-item") ? (node?.position?.start.line ?? null) : null;
+            return (
+              <li className={className}>
+                <TaskLine.Provider value={line}>{children}</TaskLine.Provider>
+              </li>
+            );
+          },
+          // Pictures open full size in a new tab. Shown with a plain <img>:
+          // they're private, served by the app's own route to signed-in
+          // viewers, which next/image's optimizer would bypass.
+          img({ src, alt }) {
+            if (typeof src !== "string" || !src) return null;
+            return (
+              <a href={src} target="_blank" rel="noopener noreferrer" className="my-3 block">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={src}
+                  alt={alt ?? ""}
+                  loading="lazy"
+                  className="mx-auto my-0 max-h-[36rem] w-auto max-w-full rounded-md border"
+                />
+              </a>
+            );
+          },
+          input({ type, checked }) {
+            if (type !== "checkbox") return null;
+            return <TaskCheckbox checked={!!checked} onToggle={onToggleTask} />;
+          },
           a({ href, children }) {
             const target = wikiTargetFromHref(href);
             if (target === null) {

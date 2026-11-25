@@ -62,6 +62,8 @@ model User {
   recapsEdited      SessionProposal[] @relation("RecapAuthor")
   avatar            UserAvatar?
   awayPeriods       AwayPeriod[]
+  notebookImages    NotebookImage[]   @relation("NotebookImages")
+  uploadedImages    NotebookImage[]   @relation("NotebookImagesUploaded")
   notebookPages     NotebookPage[]    @relation("NotebookPages")
   notebookPagesMade NotebookPage[]    @relation("NotebookPagesCreated")
   safetyEntries     SafetyEntry[]
@@ -145,6 +147,7 @@ model Campaign {
   datePolls        DatePoll[]
   safetyEntries    SafetyEntry[]
   notebookPages    NotebookPage[]
+  notebookImages   NotebookImage[]
 }
 
 model CampaignMember {
@@ -531,4 +534,27 @@ model DiscordPollMessage {
 
   @@unique([channelId, messageId])
   @@index([pollId])
+}
+
+/// A picture in a notebook (a map, a handout, an NPC portrait). It belongs
+/// to a notebook the same way pages do: the DM's notebook (DM only), one
+/// player's private notebook (ownerId; only them), or the party notebook
+/// (everyone in the campaign). Re-encoded on upload as WebP, no bigger than
+/// 2400px, with metadata such as phone GPS location removed.
+model NotebookImage {
+  id           String       @id @default(cuid())
+  campaignId   String
+  kind         NotebookKind
+  ownerId      String? // PERSONAL only: whose notebook
+  uploadedById String?
+  data         Bytes
+  width        Int
+  height       Int
+  createdAt    DateTime     @default(now())
+
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  owner      User?    @relation("NotebookImages", fields: [ownerId], references: [id], onDelete: Cascade)
+  uploadedBy User?    @relation("NotebookImagesUploaded", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([campaignId, kind, ownerId])
 }

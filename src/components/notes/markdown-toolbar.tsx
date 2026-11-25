@@ -8,8 +8,10 @@ import {
   Heading1Icon,
   Heading2Icon,
   Heading3Icon,
+  ImageIcon,
   ItalicIcon,
   LinkIcon,
+  ListChecksIcon,
   ListIcon,
   ListOrderedIcon,
   QuoteIcon,
@@ -25,6 +27,7 @@ const BUTTONS: { action: MarkdownAction; icon: typeof BoldIcon; label: string }[
   { action: "h2", icon: Heading2Icon, label: "Heading 2" },
   { action: "h3", icon: Heading3Icon, label: "Heading 3" },
   { action: "bulletList", icon: ListIcon, label: "Bullet list" },
+  { action: "taskList", icon: ListChecksIcon, label: "Checklist" },
   { action: "numberList", icon: ListOrderedIcon, label: "Numbered list" },
   { action: "quote", icon: QuoteIcon, label: "Quote" },
   { action: "code", icon: CodeIcon, label: "Code" },
@@ -36,12 +39,15 @@ export function MarkdownToolbar({
   value,
   onChange,
   onPageLink,
+  onImage,
 }: {
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   value: string;
   onChange: (next: string) => void;
   /** Shows a "link to a notebook page" button that starts a [[link]]. */
   onPageLink?: () => void;
+  /** Shows an "Add image" button that opens a file picker. */
+  onImage?: () => void;
 }) {
   function handleAction(action: MarkdownAction) {
     const textarea = textareaRef.current;
@@ -87,6 +93,19 @@ export function MarkdownToolbar({
           onClick={onPageLink}
         >
           <FileSymlinkIcon className="size-4" />
+        </Button>
+      )}
+      {onImage && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-7"
+          title="Add image"
+          aria-label="Add image"
+          onClick={onImage}
+        >
+          <ImageIcon className="size-4" />
         </Button>
       )}
     </div>

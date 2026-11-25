@@ -29,6 +29,7 @@ import {
 } from "@/lib/wikiLinks";
 import { caretCoordinates } from "@/lib/caretCoordinates";
 import { errorMessage } from "@/lib/userError";
+import { toggleTaskAtLine } from "@/lib/taskList";
 
 const MAX_SUGGESTIONS = 6;
 const MAX_MENTION_CHIPS = 3;
@@ -46,6 +47,7 @@ export function NotesEditor({
   renderPreview,
   defaultTab = "edit",
   linkHelp = "dm",
+  imageUpload,
 }: {
   initialContent: string;
   /** ISO timestamp of the loaded note, or undefined if it doesn't exist yet. */
@@ -53,7 +55,9 @@ export function NotesEditor({
   placeholder?: string;
   /** Where the text is saved: a notebook page, session prep or a recap. */
   save: (formData: FormData) => Promise<{ updatedAt: string }>;
-  onSaved?: (saved: { content: string; updatedAt: string }) => void;
+  /** After a save. `quiet` is a checklist tick saved on its own, which
+   * shouldn't, say, close the editor. */
+  onSaved?: (saved: { content: string; updatedAt: string; quiet: boolean }) => void;
   /** Shows a Cancel button next to Save. */
   onCancel?: () => void;
   /** Lets a parent warn before navigating away from unsaved changes (the
@@ -61,17 +65,21 @@ export function NotesEditor({
   onDirtyChange?: (dirty: boolean) => void;
   /** Page titles to suggest after typing [[ (DM notebook only). */
   linkTargets?: string[];
-  /** Replaces the plain markdown preview (e.g. to resolve [[links]]). */
-  renderPreview?: (content: string) => ReactNode;
+  /** Replaces the plain markdown preview (e.g. to resolve [[links]]). It
+   * gets `toggleTask` to make checklist boxes clickable. */
+  renderPreview?: (content: string, toggleTask: (line: number) => void) => ReactNode;
   defaultTab?: "edit" | "preview";
   /** Which notebook the "?" help describes. */
   linkHelp?: "dm" | "player" | "party";
+  /** Lets pictures be added (button, paste or drop), into this notebook. */
+  imageUpload?: { campaignId: string; notebook: "mine" | "party" };
 }) {
   const [content, setContent] = useState(initialContent);
   const [lastSavedContent, setLastSavedContent] = useState(initialContent);
   const [expectedUpdatedAt, setExpectedUpdatedAt] = useState(initialUpdatedAt);
   const [isPending, startTransition] = useTransition();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const listboxId = useId();
 
   // [[link]] autocomplete: the partial title being typed, if any.
@@ -197,23 +205,83 @@ export function NotesEditor({
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isDirty]);
 
-  function handleSave() {
+  function saveContent(text: string, { quiet = false } = {}) {
     startTransition(async () => {
       try {
         const formData = new FormData();
-        formData.set("content", content);
+        formData.set("content", text);
         if (expectedUpdatedAt) {
           formData.set("expectedUpdatedAt", expectedUpdatedAt);
         }
         const result = await save(formData);
         setExpectedUpdatedAt(result.updatedAt);
-        setLastSavedContent(content);
-        toast.success("Saved.");
-        onSaved?.({ content, updatedAt: result.updatedAt });
+        setLastSavedContent(text);
+        if (!quiet) toast.success("Saved.");
+        onSaved?.({ content: text, updatedAt: result.updatedAt, quiet });
       } catch (e) {
         toast.error(errorMessage(e));
+        // A tick that didn't save shouldn't look saved.
+        if (quiet) setContent((current) => (current === text ? lastSavedContent : current));
       }
     });
+  }
+
+  const handleSave = () => saveContent(content);
+
+  /**
+   * Uploads pictures and puts them in the text where the caret is. Each shows
+   * as "Uploading…" until it's done, so typing can carry on meanwhile.
+   */
+  async function addImages(files: File[]) {
+    if (!imageUpload) return;
+    const images = files.filter((f) => f.type.startsWith("image/"));
+    if (images.length === 0) {
+      toast.error("That isn't a picture. Try a JPEG, PNG or WebP.");
+      return;
+    }
+    const caret = textareaRef.current?.selectionStart ?? content.length;
+    const uploads = images.map((file, i) => ({
+      file,
+      alt: file.name.replace(/\.[^.]+$/, "").replace(/[[\]]/g, "") || "image",
+      placeholder: `![Uploading ${file.name.replace(/[[\]]/g, "")}… (${Date.now()}-${i})]()`,
+    }));
+    setContent((text) => {
+      const before = text.slice(0, caret);
+      const lead = before && !before.endsWith("\n") ? "\n" : "";
+      return `${before}${lead}${uploads.map((u) => u.placeholder).join("\n")}\n${text.slice(caret)}`;
+    });
+
+    await Promise.all(
+      uploads.map(async ({ file, alt, placeholder }) => {
+        let replacement = "";
+        try {
+          const form = new FormData();
+          form.set("campaignId", imageUpload.campaignId);
+          form.set("notebook", imageUpload.notebook);
+          form.set("image", file);
+          const res = await fetch("/api/notebook-images", { method: "POST", body: form });
+          const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+          if (!res.ok || !body.url) throw new Error(body.error ?? "Couldn't add that picture.");
+          replacement = `![${alt}](${body.url})`;
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "Couldn't add that picture.");
+        }
+        // A function, so "$&" in a file name isn't read as a pattern.
+        setContent((text) => text.replace(replacement ? placeholder : `${placeholder}\n`, () => replacement));
+      }),
+    );
+  }
+
+  /** A checklist box clicked in the preview. With no other unsaved changes
+   * it's saved straight away, like ticking a box on paper; in the middle of
+   * an edit it just joins the draft, to be saved with the rest. */
+  function toggleTask(line: number) {
+    if (isPending) return;
+    const next = toggleTaskAtLine(content, line);
+    if (next === null) return;
+    const wasClean = content === lastSavedContent;
+    setContent(next);
+    if (wasClean) saveContent(next, { quiet: true });
   }
 
   return (
@@ -250,7 +318,23 @@ export function NotesEditor({
           value={content}
           onChange={setContent}
           onPageLink={linkTargets ? startPageLink : undefined}
+          onImage={imageUpload ? () => fileInputRef.current?.click() : undefined}
         />
+        {imageUpload && (
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            hidden
+            aria-label="Choose pictures to add"
+            onChange={(e) => {
+              const files = [...(e.target.files ?? [])];
+              e.target.value = "";
+              if (files.length) void addImages(files);
+            }}
+          />
+        )}
         <div className="relative">
           <Textarea
             ref={textareaRef}
@@ -267,6 +351,20 @@ export function NotesEditor({
             }}
             onClick={(e) => refreshLinkQuery(e.currentTarget.value, e.currentTarget.selectionStart)}
             onBlur={() => setLinkQuery(null)}
+            onPaste={(e) => {
+              const files = [...e.clipboardData.files];
+              if (imageUpload && files.some((f) => f.type.startsWith("image/"))) {
+                e.preventDefault();
+                void addImages(files);
+              }
+            }}
+            onDrop={(e) => {
+              const files = [...e.dataTransfer.files];
+              if (imageUpload && files.length) {
+                e.preventDefault();
+                void addImages(files);
+              }
+            }}
             onScroll={(e) => {
               if (showSuggestions)
                 refreshLinkQuery(e.currentTarget.value, e.currentTarget.selectionStart);
@@ -347,7 +445,7 @@ export function NotesEditor({
       </TabsContent>
       <TabsContent value="preview">
         <div className="min-h-[21rem] rounded-md border p-4">
-          {renderPreview ? renderPreview(content) : <MarkdownRenderer content={content} />}
+          {renderPreview ? renderPreview(content, toggleTask) : <MarkdownRenderer content={content} />}
         </div>
       </TabsContent>
     </Tabs>
