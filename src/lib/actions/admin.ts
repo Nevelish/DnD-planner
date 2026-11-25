@@ -111,7 +111,12 @@ export async function adminResetPassword(userId: string, newPassword: string) {
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.newPassword, 10);
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  // Also signs the account out everywhere: whoever was using the old
+  // password shouldn't stay signed in.
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash, sessionVersion: { increment: 1 } },
+  });
 }
 
 export async function updatePublicUrlAction(

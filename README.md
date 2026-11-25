@@ -81,6 +81,21 @@ import, and in-app notifications.
   admins, disable/re-enable accounts, and reset a forgotten password for
   any email/password account — all without needing an email server.
 
+## Security
+
+- Disabling an account, resetting or changing a password, or removing
+  admin rights takes effect on the person's next click, not when their
+  sign-in would have expired. Changing your own password signs out your
+  other devices.
+- Sign-in is rate limited: 5 wrong passwords for an account, or 20 from one
+  IP, lock that out for 15 minutes (the counters live in memory and reset
+  when the app restarts).
+- Responses carry standard security headers (no framing by other sites,
+  no MIME sniffing, a strict referrer policy).
+- `GET /api/health` returns `{"status":"ok"}` while the app and database are
+  up (503 otherwise), and the Docker image uses it as its health check, so
+  TrueNAS shows the app as unhealthy if it hangs.
+
 ## Stack
 
 Next.js (App Router, TypeScript) + Tailwind, Prisma + PostgreSQL, Auth.js

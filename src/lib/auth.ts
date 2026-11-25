@@ -1,14 +1,40 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Discord from "next-auth/providers/discord";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
+import { cache } from "react";
 
 import type { UserRole } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { credentialsSchema } from "@/lib/validations/auth";
 import { authConfig } from "@/lib/auth.config";
+import {
+  clearLoginFailures,
+  clientIp,
+  loginRetryAfterMs,
+  recordLoginFailure,
+} from "@/lib/loginRateLimit";
+
+/** Too many failed sign-ins for this email or IP; the form shows a wait message. */
+class TooManyAttempts extends CredentialsSignin {
+  code = "too_many_attempts";
+}
+
+/**
+ * The account's current standing, read fresh on every request (and only once
+ * per request, however many times the session is looked at). Sessions are
+ * JWTs that last 30 days, so without this a disabled account, a reset
+ * password or a removed admin role wouldn't take effect until the user
+ * happened to sign in again.
+ */
+const currentAccount = cache((userId: string) =>
+  prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, disabled: true, sessionVersion: true },
+  }),
+);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -34,16 +60,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(rawCredentials) {
+      // Rate limited here rather than in the sign-in form, so posting
+      // straight to /api/auth/callback/credentials is limited too.
+      async authorize(rawCredentials, request) {
         const parsed = credentialsSchema.safeParse(rawCredentials);
         if (!parsed.success) return null;
 
         const { email, password } = parsed.data;
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user?.passwordHash || user.disabled) return null;
+        const ip = clientIp(request?.headers);
+        if (loginRetryAfterMs(email, ip) > 0) throw new TooManyAttempts();
 
-        const isValid = await bcrypt.compare(password, user.passwordHash);
-        if (!isValid) return null;
+        const user = await prisma.user.findUnique({ where: { email } });
+        const isValid =
+          !!user?.passwordHash && !user.disabled && (await bcrypt.compare(password, user.passwordHash));
+        if (!user || !isValid) {
+          recordLoginFailure(email, ip);
+          return null;
+        }
+        clearLoginFailures(email);
 
         return {
           id: user.id,
@@ -83,14 +117,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return true;
     },
     async jwt({ token, user }) {
+      if (user) token.id = user.id;
+      if (!token.id) return token;
+
+      const account = await currentAccount(token.id as string);
+      // Deleted or disabled since signing in: the session ends here.
+      if (!account || account.disabled) return null;
       if (user) {
-        token.id = user.id;
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { role: true },
-        });
-        token.role = dbUser?.role ?? "USER";
+        // Fresh sign-in: remember which "version" of the account it's for.
+        token.sessionVersion = account.sessionVersion;
+      } else if ((token.sessionVersion ?? 0) !== account.sessionVersion) {
+        // The password was changed or reset after this sign-in.
+        return null;
       }
+      // Re-read every time, so adding or removing admin takes effect now.
+      token.role = account.role;
       return token;
     },
     async session({ session, token }) {

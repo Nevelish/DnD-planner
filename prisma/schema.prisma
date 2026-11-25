@@ -46,6 +46,7 @@ model User {
   mutedNotificationTypes NotificationType[] @default([]) // no in-app notification for these
   mutedMentionTypes      NotificationType[] @default([]) // no Discord @mention for these
   avatarUpdatedAt        DateTime? // set while an uploaded picture exists; doubles as its cache-busting version
+  sessionVersion         Int                @default(0) // bumped on a password change/reset: sign-ins from before stop working
 
   accounts Account[]
   sessions Session[]

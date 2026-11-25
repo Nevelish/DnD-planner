@@ -54,4 +54,9 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
+# Lets Docker (and TrueNAS's Apps page) tell a running app from a hung one.
+# The start period covers applying migrations before the server listens.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+  CMD wget -q -O /dev/null "http://127.0.0.1:${PORT:-3000}/api/health" || exit 1
+
 ENTRYPOINT ["./entrypoint.sh"]
