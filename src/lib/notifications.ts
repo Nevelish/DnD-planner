@@ -4,6 +4,21 @@ import { postToDiscordWebhook } from "@/lib/discordWebhook";
 import { getRequestOrigin } from "@/lib/requestOrigin";
 import type { NotificationType } from "@prisma/client";
 import { MENTION_EVENT_TYPES } from "@/lib/notificationPrefs";
+import { discordBotConfig } from "@/lib/discord/api";
+import {
+  postChannelMessage,
+  postSessionMessage,
+  refreshSessionMessages,
+  sessionIdFromLink,
+} from "@/lib/discord/sessionPosts";
+
+// Posts about these get RSVP buttons when the campaign uses the Discord bot.
+const RSVP_BUTTON_TYPES: NotificationType[] = [
+  "SESSION_PROPOSED",
+  "SESSION_RESCHEDULED",
+  "SESSION_CONFIRMED",
+  "SESSION_REMINDER",
+];
 
 // Fallback embed color per event type, used whenever a call site doesn't
 // supply its own override (e.g. RSVP_CHANGED's Yes/No-specific color).
@@ -25,11 +40,12 @@ const DEFAULT_DISCORD_EMBED_COLORS: Record<NotificationType, number> = {
 };
 
 /** Mirrors whatever just got written to the in-app Notification to the
- * campaign's Discord webhook, if one is configured AND this event type is
- * one the DM has it set to post (per-campaign, in Settings). Looked up
- * here rather than at each of the call sites below, so every event that
- * already creates an in-app notification — current and future — gets
- * Discord support for free. Fire-and-forget: the webhook POST itself isn't
+ * campaign's Discord channel, if this event type is one the DM has set to
+ * post (per-campaign, in Settings). Campaigns connected to the Discord bot
+ * get it from the bot (with RSVP buttons on session posts); others through
+ * their webhook, if they have one. Looked up here rather than at each call
+ * site, so every event that creates an in-app notification gets Discord
+ * support for free. Fire-and-forget: the Discord request itself isn't
  * awaited, so a slow or unreachable Discord never adds latency to the
  * action that triggered it. */
 async function notifyDiscord(
@@ -52,12 +68,20 @@ async function notifyDiscord(
 
   const campaign = await prisma.campaign.findUnique({
     where: { id: campaignId },
-    select: { name: true, discordWebhookUrl: true, discordWebhookEvents: true },
+    select: { name: true, discordWebhookUrl: true, discordWebhookEvents: true, discordChannelId: true },
   });
-  if (!campaign?.discordWebhookUrl) return;
+  if (!campaign) return;
+
+  // Whatever happened to a session (an RSVP, a reschedule, a cancellation),
+  // the bot's earlier posts about it should show it, posted or not.
+  const sessionId = sessionIdFromLink(input.link);
+  const useBot = !!campaign.discordChannelId && !!discordBotConfig();
+  if (sessionId && useBot) void refreshSessionMessages(sessionId);
+
+  if (!useBot && !campaign.discordWebhookUrl) return;
   if (!campaign.discordWebhookEvents.includes(input.type)) return;
 
-  let content: string | undefined;
+  let mentionDiscordIds: string[] = [];
   if (MENTION_EVENT_TYPES.includes(input.type)) {
     const members = await prisma.campaignMember.findMany({
       where: {
@@ -74,19 +98,40 @@ async function notifyDiscord(
       },
       select: { user: { select: { discordUserId: true } } },
     });
-    if (members.length > 0) {
-      content = members.map((m) => `<@${m.user.discordUserId}>`).join(" ");
-    }
+    mentionDiscordIds = members.map((m) => m.user.discordUserId!);
   }
+  const content = mentionDiscordIds.map((id) => `<@${id}>`).join(" ") || undefined;
 
   const origin = await getRequestOrigin();
-  void postToDiscordWebhook(campaign.discordWebhookUrl, {
+  const url = input.link ? `${origin}${input.link}` : undefined;
+  const color = input.color ?? DEFAULT_DISCORD_EMBED_COLORS[input.type];
+  const timestamp = new Date().toISOString();
+
+  if (useBot) {
+    const embed = {
+      title: input.title,
+      description: input.body || undefined,
+      url,
+      color,
+      footer: { text: campaign.name },
+      timestamp,
+    };
+    const channelId = campaign.discordChannelId!;
+    if (sessionId && RSVP_BUTTON_TYPES.includes(input.type)) {
+      void postSessionMessage({ channelId, sessionId, embed, content, mentionDiscordIds });
+    } else {
+      void postChannelMessage({ channelId, embed, content, mentionDiscordIds });
+    }
+    return;
+  }
+
+  void postToDiscordWebhook(campaign.discordWebhookUrl!, {
     title: input.title,
     body: input.body,
-    url: input.link ? `${origin}${input.link}` : undefined,
-    color: input.color ?? DEFAULT_DISCORD_EMBED_COLORS[input.type],
+    url,
+    color,
     footerText: campaign.name,
-    timestamp: new Date().toISOString(),
+    timestamp,
     content,
   });
 }

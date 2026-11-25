@@ -32,6 +32,9 @@ services:
       TZ: Europe/Oslo # your group's timezone, used for reminder times
       # DISCORD_CLIENT_ID: REPLACE_ME
       # DISCORD_CLIENT_SECRET: REPLACE_ME
+      # The Discord bot (RSVP buttons in Discord), optional; see the README:
+      # DISCORD_BOT_TOKEN: REPLACE_ME
+      # DISCORD_PUBLIC_KEY: REPLACE_ME
     depends_on:
       postgres:
         condition: service_healthy

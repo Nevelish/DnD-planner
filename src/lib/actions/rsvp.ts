@@ -2,15 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
-import { prisma } from "@/lib/prisma";
 import { requireMember } from "@/lib/permissions";
-import { rsvpSchema } from "@/lib/validations/session";
-import { notifyCampaignMembers } from "@/lib/notifications";
-import { formatSessionDateTime } from "@/lib/sessionDateFormat";
-import { UserError } from "@/lib/userError";
-
-const RSVP_LABEL = { YES: "Yes", MAYBE: "Maybe", NO: "No" } as const;
-const RSVP_COLOR = { YES: 0x57a64a, MAYBE: 0xe0a33a, NO: 0xd9534f } as const;
+import { recordRsvp } from "@/lib/rsvp";
 
 export async function respond(
   campaignId: string,
@@ -19,81 +12,9 @@ export async function respond(
   reason?: string,
 ) {
   const membership = await requireMember(campaignId);
-
-  const parsed = rsvpSchema.safeParse({ status, reason });
-  if (!parsed.success) {
-    throw new UserError(parsed.error.issues[0]?.message ?? "Invalid input.");
-  }
-
-  const [existing, proposal, user] = await Promise.all([
-    prisma.rsvp.findUnique({
-      where: {
-        sessionProposalId_memberId: {
-          sessionProposalId: proposalId,
-          memberId: membership.id,
-        },
-      },
-    }),
-    prisma.sessionProposal.findUniqueOrThrow({
-      where: { id: proposalId, campaignId },
-      select: { startsAt: true, status: true },
-    }),
-    prisma.user.findUniqueOrThrow({
-      where: { id: membership.userId },
-      select: { name: true, email: true },
-    }),
-  ]);
-
-  if (proposal.status !== "PROPOSED" && proposal.status !== "CONFIRMED") {
-    throw new UserError("This session is no longer open for RSVPs.");
-  }
-
-  const isCancellation = existing?.status === "YES" && parsed.data.status === "NO";
-  if (isCancellation && !parsed.data.reason) {
-    throw new UserError(
-      "Let the group know why, so they can decide whether to still run it.",
-    );
-  }
-
-  const rsvp = await prisma.rsvp.upsert({
-    where: {
-      sessionProposalId_memberId: {
-        sessionProposalId: proposalId,
-        memberId: membership.id,
-      },
-    },
-    create: {
-      sessionProposalId: proposalId,
-      memberId: membership.id,
-      status: parsed.data.status,
-      cancellationReason: parsed.data.status === "NO" ? parsed.data.reason : undefined,
-      respondedAt: new Date(),
-    },
-    update: {
-      status: parsed.data.status,
-      cancellationReason: parsed.data.status === "NO" ? (parsed.data.reason ?? null) : null,
-      respondedAt: new Date(),
-    },
-  });
-
-  const playerName = user.name ?? user.email;
-  const newStatus = parsed.data.status;
-  const title = isCancellation
-    ? `${playerName} can no longer make it`
-    : existing?.status === "YES" && newStatus === "MAYBE"
-      ? `${playerName} might not make it after all`
-      : `${playerName} RSVP'd ${RSVP_LABEL[newStatus]}`;
-  await notifyCampaignMembers(campaignId, {
-    type: "RSVP_CHANGED",
-    title,
-    body: `${await formatSessionDateTime(proposal.startsAt)}${parsed.data.reason ? ` — ${parsed.data.reason}` : ""}`,
-    link: `/campaigns/${campaignId}/sessions/${proposalId}`,
-    excludeUserId: membership.userId,
-    color: RSVP_COLOR[newStatus],
-  });
+  const rsvp = await recordRsvp({ campaignId, proposalId, membership, status, reason });
 
   revalidatePath(`/campaigns/${campaignId}/sessions/${proposalId}`);
   revalidatePath(`/campaigns/${campaignId}`);
-
   return rsvp;
 }

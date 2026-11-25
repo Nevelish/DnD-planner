@@ -1,10 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { requireDMForPage } from "@/lib/permissions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditCampaignForm } from "@/components/campaigns/edit-campaign-form";
 import { DeleteCampaignButton } from "@/components/campaigns/delete-campaign-button";
 import { DiscordWebhookForm } from "@/components/campaigns/discord-webhook-form";
 import { RecurringRuleForm } from "@/components/sessions/recurring-rule-form";
+import { DiscordBotCard } from "@/components/campaigns/discord-bot-card";
+import { discordApi, discordBotConfig } from "@/lib/discord/api";
+
+// Read Messages, Send Messages, Embed Links, Read Message History.
+const BOT_PERMISSIONS = 1024 + 2048 + 16384 + 65536;
 
 export default async function CampaignSettingsPage({
   params,
@@ -20,6 +25,18 @@ export default async function CampaignSettingsPage({
       where: { campaignId, isActive: true },
     }),
   ]);
+
+  const bot = discordBotConfig();
+  const channel =
+    bot && campaign.discordChannelId
+      ? await discordApi<{ name?: string }>("GET", `/channels/${campaign.discordChannelId}`)
+      : null;
+  const channelLabel = campaign.discordChannelId
+    ? channel?.name
+      ? `#${channel.name}`
+      : `channel ${campaign.discordChannelId}`
+    : null;
+  const botConnected = !!bot && !!campaign.discordChannelId;
 
   return (
     <div className="flex flex-col gap-6">
@@ -45,9 +62,31 @@ export default async function CampaignSettingsPage({
         </CardContent>
       </Card>
 
+      {bot && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Discord bot</CardTitle>
+          </CardHeader>
+          <CardContent className="pb-6">
+            <DiscordBotCard
+              campaignId={campaignId}
+              channelLabel={channelLabel}
+              autoJoin={campaign.discordAutoJoin}
+              inviteUrl={`https://discord.com/oauth2/authorize?client_id=${bot.applicationId}&scope=bot+applications.commands&permissions=${BOT_PERMISSIONS}`}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Discord notifications</CardTitle>
+          {botConnected && (
+            <CardDescription>
+              The Discord bot is posting for this campaign, so the webhook URL isn&apos;t used. The
+              events you pick here still decide what gets posted.
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           <DiscordWebhookForm

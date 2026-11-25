@@ -19,7 +19,8 @@ export const authConfig = {
       const isLoggedIn = !!auth?.user;
       const { pathname } = request.nextUrl;
 
-      const publicPaths = ["/", "/signin", "/signup", "/error"];
+      // /discord/join explains itself to someone who isn't signed in yet.
+      const publicPaths = ["/", "/signin", "/signup", "/error", "/discord/join"];
       const isPublicPath =
         publicPaths.includes(pathname) || pathname.startsWith("/invite/");
 

@@ -10,6 +10,7 @@ import { campaignSchema, discordWebhookSettingsSchema } from "@/lib/validations/
 import { createNotification } from "@/lib/notifications";
 import { postToDiscordWebhook } from "@/lib/discordWebhook";
 import { UserError } from "@/lib/userError";
+import { addPlayerToCampaign } from "@/lib/membership";
 
 export async function createCampaign(formData: FormData) {
   const userId = await requireUserId();
@@ -94,29 +95,7 @@ export async function joinCampaignByCode(inviteCode: string) {
     throw new UserError("That invite link is invalid or has expired.");
   }
 
-  const existing = await prisma.campaignMember.findUnique({
-    where: { campaignId_userId: { campaignId: campaign.id, userId } },
-  });
-  if (existing) {
-    return { campaignId: campaign.id };
-  }
-
-  await prisma.campaignMember.create({
-    data: { campaignId: campaign.id, userId, role: "PLAYER" },
-  });
-
-  const user = await prisma.user.findUniqueOrThrow({
-    where: { id: userId },
-    select: { name: true, email: true },
-  });
-
-  await createNotification({
-    recipientId: campaign.ownerId,
-    campaignId: campaign.id,
-    type: "MEMBER_JOINED",
-    title: `${user.name ?? user.email} joined ${campaign.name}`,
-    link: `/campaigns/${campaign.id}/members`,
-  });
+  await addPlayerToCampaign(campaign.id, userId);
 
   revalidatePath(`/campaigns/${campaign.id}`);
   return { campaignId: campaign.id };
