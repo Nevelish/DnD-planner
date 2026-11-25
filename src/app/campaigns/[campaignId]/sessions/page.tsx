@@ -18,6 +18,7 @@ import { OpenPollCard } from "@/components/polls/open-poll-card";
 import { getOpenPolls } from "@/lib/openPolls";
 import { getLastSessionPlace } from "@/lib/lastSessionPlace";
 import { SESSION_FORMAT_LABELS } from "@/lib/sessionPlace";
+import { loadCampaignAway, toAwayRanges } from "@/lib/away";
 
 const statusVariant = {
   DRAFT: "secondary",
@@ -38,7 +39,7 @@ export default async function SessionsPage({
 
   await completePastSessions([campaignId]);
 
-  const [proposals, prefs, { polls, playerCount }, lastPlace] = await Promise.all([
+  const [proposals, prefs, { polls, playerCount }, lastPlace, away] = await Promise.all([
     prisma.sessionProposal.findMany({
       where: { campaignId, status: isDM ? undefined : { not: "DRAFT" } },
       orderBy: { startsAt: "desc" },
@@ -46,6 +47,7 @@ export default async function SessionsPage({
     getDateTimePrefs(userId),
     getOpenPolls(campaignId),
     isDM ? getLastSessionPlace(campaignId) : undefined,
+    isDM ? loadCampaignAway(campaignId).then(toAwayRanges) : [],
   ]);
 
   return (
@@ -60,8 +62,8 @@ export default async function SessionsPage({
           </Button>
           {isDM && (
             <>
-              <CreatePollDialog campaignId={campaignId} />
-              <ProposeSessionDialog campaignId={campaignId} mode="create" defaultValues={lastPlace} />
+              <CreatePollDialog campaignId={campaignId} away={away} />
+              <ProposeSessionDialog campaignId={campaignId} mode="create" defaultValues={lastPlace} away={away} />
             </>
           )}
         </div>

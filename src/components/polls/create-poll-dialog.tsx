@@ -31,10 +31,20 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { errorMessage } from "@/lib/userError";
+import { AwayWarning } from "@/components/sessions/away-warning";
+import type { AwayRange } from "@/lib/awayDays";
 
 const LENGTH_OPTIONS = [2, 3, 4, 5, 6].map((h) => ({ minutes: h * 60, label: `${h} hours` }));
 
-function PollFormFields({ campaignId, onDone }: { campaignId: string; onDone: () => void }) {
+function PollFormFields({
+  campaignId,
+  away,
+  onDone,
+}: {
+  campaignId: string;
+  away: AwayRange[];
+  onDone: () => void;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
@@ -106,23 +116,26 @@ function PollFormFields({ campaignId, onDone }: { campaignId: string; onDone: ()
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1.5 text-sm font-medium">Dates to choose from</legend>
         {dates.map((value, index) => (
-          <div key={index} className="flex gap-2">
-            <Input
-              type="datetime-local"
-              aria-label={`Date option ${index + 1}`}
-              value={value}
-              onChange={(e) => setDate(index, e.target.value)}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={`Remove date option ${index + 1}`}
-              disabled={dates.length <= 2}
-              onClick={() => removeDate(index)}
-            >
-              <XIcon />
-            </Button>
+          <div key={index} className="flex flex-col gap-1">
+            <div className="flex gap-2">
+              <Input
+                type="datetime-local"
+                aria-label={`Date option ${index + 1}`}
+                value={value}
+                onChange={(e) => setDate(index, e.target.value)}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={`Remove date option ${index + 1}`}
+                disabled={dates.length <= 2}
+                onClick={() => removeDate(index)}
+              >
+                <XIcon />
+              </Button>
+            </div>
+            <AwayWarning away={away} value={value} compact />
           </div>
         ))}
         {dates.length < MAX_POLL_OPTIONS && (
@@ -140,7 +153,7 @@ function PollFormFields({ campaignId, onDone }: { campaignId: string; onDone: ()
   );
 }
 
-export function CreatePollDialog({ campaignId }: { campaignId: string }) {
+export function CreatePollDialog({ campaignId, away = [] }: { campaignId: string; away?: AwayRange[] }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -158,7 +171,7 @@ export function CreatePollDialog({ campaignId }: { campaignId: string }) {
             for them, then you pick the winner.
           </DialogDescription>
         </DialogHeader>
-        {open && <PollFormFields campaignId={campaignId} onDone={() => setOpen(false)} />}
+        {open && <PollFormFields campaignId={campaignId} away={away} onDone={() => setOpen(false)} />}
       </DialogContent>
     </Dialog>
   );

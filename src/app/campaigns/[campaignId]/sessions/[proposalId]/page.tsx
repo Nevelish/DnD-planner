@@ -23,6 +23,8 @@ import { CancelProposalButton } from "@/components/sessions/cancel-proposal-butt
 import { SessionPlace } from "@/components/sessions/session-place";
 import { RecapSection } from "@/components/sessions/recap-section";
 import { SessionPrepSection } from "@/components/sessions/session-prep-section";
+import { groupDay, loadCampaignAway, toAwayRanges } from "@/lib/away";
+import { awayOn } from "@/lib/awayDays";
 
 const statusVariant = {
   DRAFT: "secondary",
@@ -79,6 +81,11 @@ export default async function SessionDetailPage({
   });
   const currentUserName = me.name ?? me.email ?? "you";
   const isActive = proposal.status === "PROPOSED" || proposal.status === "CONFIRMED";
+  // Who's away on the day, for upcoming sessions (and the DM's edit dialog).
+  const away = isActive ? await loadCampaignAway(campaignId) : [];
+  const awayThatDay = Object.fromEntries(
+    awayOn(away, groupDay(proposal.startsAt)).map((a) => [a.userId, a.note]),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -125,6 +132,7 @@ export default async function SessionDetailPage({
                 proposalId={proposal.id}
                 mode="edit"
                 defaultValues={proposalDefaults(proposal)}
+                away={toAwayRanges(away)}
                 trigger={
                   <button className="text-sm font-medium underline underline-offset-2">
                     Edit
@@ -138,7 +146,7 @@ export default async function SessionDetailPage({
             </div>
           )}
 
-          <RsvpList rsvps={proposal.rsvps} />
+          <RsvpList rsvps={proposal.rsvps} away={awayThatDay} />
         </CardContent>
       </Card>
 

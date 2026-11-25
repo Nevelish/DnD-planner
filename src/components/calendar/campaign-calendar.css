@@ -15,6 +15,25 @@
   border: 1px solid var(--border);
 }
 
+/* Away dates: a quiet striped bar, so sessions still stand out. */
+.rbc-event-away {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--muted),
+    var(--muted) 6px,
+    var(--background) 6px,
+    var(--background) 12px
+  );
+  color: var(--muted-foreground);
+  border: 1px dashed var(--border);
+  cursor: default;
+}
+
+.rbc-event-away-mine {
+  color: var(--foreground);
+  border-color: var(--muted-foreground);
+}
+
 .rbc-today {
   background-color: var(--accent);
 }
