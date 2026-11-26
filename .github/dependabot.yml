@@ -1,0 +1,46 @@
+# Weekly pull requests with small updates (patches and minor versions), one
+# per ecosystem. Each runs the full test suite in CI, so a green one can be
+# merged as it is. Major versions (Prisma 8, TypeScript 7, ESLint 10, a new
+# Node major…) are left out on purpose: they need changes and are done by
+# hand, one at a time.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Oslo
+    open-pull-requests-limit: 3
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      # NextAuth v5 is still published as a beta; npm's "latest" is v4.
+      - dependency-name: next-auth
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Oslo
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directory: /docker
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Oslo
+    ignore:
+      # Stay on the Node major the app is tested with (22).
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]

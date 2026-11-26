@@ -29,6 +29,9 @@ export default defineConfig({
     timezoneId: "Europe/Oslo",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
+    // Normally Playwright's own Chromium (`npx playwright install chromium`).
+    // Set E2E_CHROMIUM_PATH to use another installed Chromium instead.
+    launchOptions: process.env.E2E_CHROMIUM_PATH ? { executablePath: process.env.E2E_CHROMIUM_PATH } : {},
   },
   projects: [
     { name: "app", testIgnore: /security\.spec\.ts/ },
