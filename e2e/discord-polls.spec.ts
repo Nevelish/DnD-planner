@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import {
   DM, PLAYER1, PLAYER2, campaignId, futureDate, go, login, resetDatabase, sql, userId,
 } from "./support";
-import { CHANNEL, buttonClick, interact, listChange, startFakeDiscord } from "./discord";
+import { CHANNEL, buttonClick, interact, listChange, modalSubmitValues, startFakeDiscord } from "./discord";
 
 /**
  * Voting on date polls from Discord: the bot posts the poll with a Vote
@@ -82,7 +82,7 @@ test("players vote in a private panel with two lists", async ({ request }) => {
   expect(panel.data.flags).toBe(64);
   expect(panel.data.content).toContain("not answered");
   const lists = panel.data.components.map((row) => row.components[0]);
-  expect(lists.map((l) => l.custom_id)).toEqual([`pollyes:${pollId}`, `pollmaybe:${pollId}`]);
+  expect(lists.map((l) => l.custom_id)).toEqual([`pollyes:${pollId}`, `pollmaybe:${pollId}`, `pollsuggest:${pollId}`]);
   expect(lists[0].options.map((o) => o.value)).toEqual(options);
 
   // "Dates that work": the first two. The third, in neither list, is a No.
@@ -127,7 +127,7 @@ test("someone not in the campaign gets a link to join and vote", async ({ browse
 
   // Now the Vote button opens the panel for them too.
   const panel = (await interact(request, buttonClick(NEWBIE_DISCORD, `pollvote:${pollId}`))).json as Panel;
-  expect(panel.data.components).toHaveLength(2);
+  expect(panel.data.components).toHaveLength(3); // two lists, and "Suggest another date"
   await newbie.context().close();
 });
 
@@ -135,7 +135,7 @@ test("with auto-join on, clicking Vote joins and opens the panel", async ({ requ
   sql(`UPDATE "Campaign" SET "discordAutoJoin" = true`);
   const panel = (await interact(request, buttonClick(STRANGER_DISCORD, `pollvote:${pollId}`, { name: "Sam Stranger" }))).json as Panel;
   expect(panel.data.content).toContain("Welcome to **Curse of the Crimson Throne**!");
-  expect(panel.data.components).toHaveLength(2);
+  expect(panel.data.components).toHaveLength(3); // two lists, and "Suggest another date"
   sql(`UPDATE "Campaign" SET "discordAutoJoin" = false`);
 });
 
@@ -157,6 +157,45 @@ test("votes on the site and new dates show on the post", async ({ browser }) => 
   await rin.context().close();
 });
 
+test("players suggest a date from Discord, in a pop-up", async ({ request }) => {
+  const panel = (await interact(request, buttonClick(P1_DISCORD, `pollvote:${pollId}`))).json as Panel;
+  expect(JSON.stringify(panel.data.components[2])).toContain(`pollsuggest:${pollId}`);
+
+  const popup = (await interact(request, buttonClick(P1_DISCORD, `pollsuggest:${pollId}`))).json;
+  expect(popup.type).toBe(9);
+  expect(popup.data.custom_id).toBe(`pollsuggestform:${pollId}`);
+  // The time box starts at the poll's usual time.
+  expect(popup.data.components.map((c: { component: { custom_id: string; value?: string } }) => [c.component.custom_id, c.component.value]))
+    .toEqual([["date", undefined], ["time", "19:00"]]);
+
+  const submit = (date: string, time = "19:00") =>
+    interact(request, modalSubmitValues(P1_DISCORD, `pollsuggestform:${pollId}`, { date, time }));
+
+  let reply = (await submit("31.02")).json;
+  expect(reply.type).toBe(7); // the panel updates, with the reason
+  expect(reply.data.content).toContain("Couldn't add that date: That date doesn't exist.");
+  reply = (await submit("26.12", "25:00")).json;
+  expect(reply.data.content).toContain("Couldn't add that date: I couldn't read that time.");
+
+  const [year, , day] = futureDate(7, "19:00").slice(0, 10).split("-");
+  reply = (await submit(`${day}.12.${year}`)).json;
+  expect(reply.data.content).toMatch(/^Added <t:\d+:F>, and you're marked as a Yes for it\./);
+  expect(sql(`SELECT u.email || '|' || v.choice FROM "DatePollOption" o
+              JOIN "User" u ON u.id = o."addedById"
+              JOIN "DatePollVote" v ON v."optionId" = o.id
+              WHERE o."pollId" = '${pollId}' AND to_char(o."startsAt", 'MM-DD HH24:MI') = '12-07 18:00'`))
+    .toBe(`${PLAYER1}|YES`);
+  // The new date is in the panel's lists, already picked as a Yes.
+  const yesList = (reply as Panel).data.components[0].components[0].options;
+  expect(yesList.filter((o) => o.default).length).toBeGreaterThan(0);
+
+  reply = (await submit(`${day}.12.${year}`)).json;
+  expect(reply.data.content).toContain("Couldn't add that date: That date is already in the poll.");
+
+  // Everyone else hears about it as a reply to the poll's post.
+  await expect.poll(() => posts().filter((p) => p.body?.message_reference).length).toBe(2);
+});
+
 test("picking a date closes the poll's post and posts the session", async ({ request }) => {
   await dm.reload({ waitUntil: "networkidle" });
   const best = dm.locator("li", { has: dm.getByText("Best so far") });
@@ -171,7 +210,8 @@ test("picking a date closes the poll's post and posts the session", async ({ req
   await expect.poll(() => posts().some((p) => JSON.stringify(p.body?.components ?? []).includes(`rsvp:${sessionId}:YES`))).toBe(true);
 
   // A panel left open from before can't change the closed poll.
+  const before = votesOf(PLAYER1); // including a Yes for the date they suggested
   const stale = (await interact(request, listChange(P1_DISCORD, `pollyes:${pollId}`, [options[1]]))).json;
   expect(stale.data.content).toContain("This poll is closed.");
-  expect(votesOf(PLAYER1)).toBe("YES,NO,MAYBE");
+  expect(votesOf(PLAYER1)).toBe(before);
 });

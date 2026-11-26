@@ -9,6 +9,7 @@ import { awayOn } from "@/lib/awayDays";
 import { bestOptionId, isPast, tallyOption } from "@/lib/pollResults";
 import { getServerTimeZone } from "@/lib/timezone";
 import type { DiscordEmbed } from "@/lib/discord/sessionPosts";
+import { MAX_POLL_OPTIONS } from "@/lib/validations/poll";
 
 type DiscordMessage = { id: string };
 
@@ -233,11 +234,31 @@ export async function pollVotePanel(pollId: string, memberId: string, notice?: s
     content:
       `${notice ? `${notice}\n\n` : ""}**${poll.title || "Find a date for the next session"}**\n` +
       "Pick every date you could make in the first list, and dates that might work in the second. " +
-      "Dates in neither count as No. Changes save straight away.\n\n" +
+      "Dates in neither count as No. Changes save straight away. None of them work? Suggest another date.\n\n" +
       summary,
     components: [
       list("YES", "pollyes", "Dates that work for me"),
       list("MAYBE", "pollmaybe", "Dates that might work"),
+      ...(poll.options.length < MAX_POLL_OPTIONS
+        ? [
+            {
+              type: 1,
+              components: [{ type: 2, style: 2, label: "Suggest another date", custom_id: `pollsuggest:${pollId}` }],
+            },
+          ]
+        : []),
     ],
   };
+}
+
+/** The start time most of a poll's dates share, as "19:00" in `timeZone`, to
+ * pre-fill when suggesting another date. */
+export async function usualPollTime(pollId: string, timeZone: string) {
+  const options = await prisma.datePollOption.findMany({ where: { pollId }, select: { startsAt: true } });
+  const counts = new Map<string, number>();
+  for (const o of options) {
+    const time = formatInTimeZone(o.startsAt, timeZone, "HH:mm");
+    counts.set(time, (counts.get(time) ?? 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "19:00";
 }

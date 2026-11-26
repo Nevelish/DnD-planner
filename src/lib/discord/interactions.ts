@@ -7,7 +7,10 @@ import { addPlayerToCampaign, isRemovedFromCampaign } from "@/lib/membership";
 import { recordRsvp, rsvpNeedsReason, type RsvpAnswer } from "@/lib/rsvp";
 import { UserError } from "@/lib/userError";
 import { createJoinToken, type JoinTarget } from "@/lib/discord/joinLink";
-import { pollVotePanel, refreshPollMessages } from "@/lib/discord/pollPosts";
+import { pollVotePanel, refreshPollMessages, usualPollTime } from "@/lib/discord/pollPosts";
+import { addPollDate } from "@/lib/pollOptions";
+import { readDateAndTime } from "@/lib/dateInput";
+import { getServerTimeZone } from "@/lib/timezone";
 import { saveVotesFromList } from "@/lib/pollVotes";
 
 // What Discord sends: https://discord.com/developers/docs/interactions/receiving-and-responding
@@ -111,6 +114,7 @@ export async function handleInteraction(interaction: Interaction): Promise<unkno
       }
       if (kind === "connect") return await connectClick(interaction, id);
       if (kind === "pollvote") return await pollVoteClick(interaction, id);
+      if (kind === "pollsuggest") return await pollSuggestClick(interaction, id);
       if (kind === "pollyes" || kind === "pollmaybe") {
         return await pollListChange(interaction, id, kind === "pollyes" ? "YES" : "MAYBE");
       }
@@ -118,6 +122,7 @@ export async function handleInteraction(interaction: Interaction): Promise<unkno
     if (interaction.type === InteractionType.MODAL_SUBMIT) {
       const [kind, id] = customId.split(":");
       if (kind === "reason") return await reasonSubmit(interaction, id);
+      if (kind === "pollsuggestform") return await pollSuggestSubmit(interaction, id);
     }
     return privately("Sorry, I don't know what to do with that.");
   } catch (e) {
@@ -199,6 +204,14 @@ async function connectClick(interaction: Interaction, campaignId: string) {
       components: [],
     },
   };
+}
+
+/** A text box's value from a submitted pop-up: inside a Label (the current
+ * format) or an action row (the older one). */
+function modalValue(interaction: Interaction, customId: string) {
+  return (interaction.data?.components ?? [])
+    .flatMap((row) => [row.component, ...(row.components ?? [])])
+    .find((c) => c?.custom_id === customId)?.value;
 }
 
 // ---------- Who clicked ----------
@@ -315,10 +328,7 @@ async function rsvpClick(interaction: Interaction, sessionId: string, status: Rs
 }
 
 async function reasonSubmit(interaction: Interaction, sessionId: string) {
-  const rows = interaction.data?.components ?? [];
-  const reason = rows
-    .flatMap((row) => [row.component, ...(row.components ?? [])])
-    .find((c) => c?.custom_id === "reason")?.value;
+  const reason = modalValue(interaction, "reason");
 
   const session = await prisma.sessionProposal.findUnique({
     where: { id: sessionId },
@@ -381,5 +391,70 @@ async function pollListChange(interaction: Interaction, pollId: string, choice: 
   void refreshPollMessages(pollId);
   const panel = await pollVotePanel(pollId, membership.id, "Saved.");
   if (!panel) return { type: Callback.UPDATE_MESSAGE, data: { content: "This poll is closed.", components: [] } };
+  return { type: Callback.UPDATE_MESSAGE, data: { content: panel.content, components: panel.components } };
+}
+
+/** The player (not the DM) behind a click on a poll they're in, or null. */
+async function pollPlayer(interaction: Interaction, pollId: string) {
+  const poll = await prisma.datePoll.findUnique({ where: { id: pollId }, select: { campaignId: true } });
+  const user = await plannerUserFor(discordUserOf(interaction).id);
+  const membership =
+    poll && user && !user.disabled
+      ? await prisma.campaignMember.findUnique({
+          where: { campaignId_userId: { campaignId: poll.campaignId, userId: user.id } },
+        })
+      : null;
+  return poll && membership?.role === "PLAYER" ? { campaignId: poll.campaignId, membership } : null;
+}
+
+/** "Suggest another date" in the voting panel: a pop-up for the date and
+ * time, the time filled in with the poll's usual start. */
+async function pollSuggestClick(interaction: Interaction, pollId: string) {
+  if (!(await pollPlayer(interaction, pollId))) return privately("I couldn't do that. Try suggesting the date on the website.");
+  const timeZone = getServerTimeZone();
+  const box = (customId: string, label: string, description: string, extra: object) => ({
+    type: 18, // label
+    label,
+    description,
+    component: { type: 4, custom_id: customId, style: 1, required: true, max_length: 40, ...extra },
+  });
+  return {
+    type: Callback.MODAL,
+    data: {
+      custom_id: `pollsuggestform:${pollId}`,
+      title: "Suggest another date",
+      components: [
+        box("date", "Date", "Day first, like 26.12 or 26.12.2027", { placeholder: "26.12" }),
+        box("time", "Start time", `24-hour clock, ${timeZone.replace(/_/g, " ")} time`, {
+          value: await usualPollTime(pollId, timeZone),
+        }),
+      ],
+    },
+  };
+}
+
+/** The suggested date from the pop-up: added like on the site (counting the
+ * suggester as a Yes), and the panel shows it. */
+async function pollSuggestSubmit(interaction: Interaction, pollId: string) {
+  const player = await pollPlayer(interaction, pollId);
+  if (!player) return privately("I couldn't do that. Try suggesting the date on the website.");
+
+  const timeZone = getServerTimeZone();
+  const read = readDateAndTime(modalValue(interaction, "date") ?? "", modalValue(interaction, "time") ?? "", timeZone);
+  let notice: string;
+  if ("error" in read) {
+    notice = `Couldn't add that date: ${read.error}`;
+  } else {
+    try {
+      await addPollDate({ campaignId: player.campaignId, pollId, membership: player.membership, startsAt: read.date });
+      void refreshPollMessages(pollId);
+      notice = `Added <t:${Math.floor(read.date.getTime() / 1000)}:F>, and you're marked as a Yes for it.`;
+    } catch (e) {
+      if (!(e instanceof UserError)) throw e;
+      notice = `Couldn't add that date: ${e.message}`;
+    }
+  }
+  const panel = await pollVotePanel(pollId, player.membership.id, notice);
+  if (!panel) return { type: Callback.UPDATE_MESSAGE, data: { content: notice, components: [] } };
   return { type: Callback.UPDATE_MESSAGE, data: { content: panel.content, components: panel.components } };
 }

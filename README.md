@@ -70,7 +70,9 @@ import, and in-app notifications.
   answers on the post stay up to date. Date polls get a **Vote** button that
   opens a private panel with two lists, "dates that work for me" and "dates
   that might work"; the poll's post shows everyone's votes and the best date
-  so far, and says which date was picked. Backing out after a Yes asks for a reason in a
+  so far, and says which date was picked. If none of the dates work,
+  "Suggest another date" in the panel opens a pop-up for a date (like
+  `26.12`) and a time. Backing out after a Yes asks for a reason in a
   pop-up. Someone who isn't in the campaign yet gets a link to join once
   with their Discord account; or the DM can let anyone in the channel join
   just by answering (their account takes their Discord name and picture).
@@ -296,7 +298,10 @@ moved, confirmed, cancelled or coming up tomorrow, the bot replies to that
 post rather than starting a new one. Date polls work the same way: one post
 per poll with a Vote button and live counts, dates suggested later posted as
 replies, and the post closed with a link to the session once a date is picked.
-Suggesting a new date stays on the website. Connecting also switches off posts for
+Players can suggest a new date from the voting panel too: a pop-up takes the
+date as typed (`26.12`, `26.12.2027`, `26 dec`; without a year, the next time
+it comes around) and a start time in the group's timezone, filled in with the
+poll's usual one. Connecting also switches off posts for
 each RSVP, members joining or leaving, and recurring drafts, since the
 session post covers those; the DM can turn any back on in Settings. Players
 whose planner account is linked to Discord can answer right away. Anyone else
