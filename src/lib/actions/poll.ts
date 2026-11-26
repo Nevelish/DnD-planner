@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireDM, requireMember } from "@/lib/permissions";
 import {
-  MAX_POLL_OPTIONS,
   addPollOptionSchema,
   createPollSchema,
   pollVoteSchema,
@@ -17,6 +16,7 @@ import { getLastSessionPlace } from "@/lib/lastSessionPlace";
 import { placeSuffix } from "@/lib/sessionPlace";
 import { UserError } from "@/lib/userError";
 import { refreshPollMessages } from "@/lib/discord/pollPosts";
+import { addPollDate } from "@/lib/pollOptions";
 
 /** After any change to a poll: refresh its pages, and the Discord bot's
  * posts about it (counts, the best date, or which date was picked). */
@@ -195,13 +195,7 @@ export async function cancelPoll(campaignId: string, pollId: string) {
   revalidatePoll(campaignId, pollId);
 }
 
-/**
- * Adds a date to an open poll — for when none of the DM's dates work. Anyone
- * in the campaign can add one. A player who adds a date can obviously make
- * it, so they're counted as a Yes straight away; everyone who has already
- * voted (and the DM) is told, so the new date isn't left looking unpopular
- * just because nobody has seen it yet.
- */
+/** Adds a date to an open poll from the site (see addPollDate). */
 export async function addPollOption(campaignId: string, pollId: string, formData: FormData) {
   const membership = await requireMember(campaignId);
 
@@ -209,68 +203,7 @@ export async function addPollOption(campaignId: string, pollId: string, formData
   if (!parsed.success) {
     throw new UserError(parsed.error.issues[0]?.message ?? "Pick a valid date and time.");
   }
-  const { startsAt } = parsed.data;
-
-  const poll = await prisma.datePoll.findFirst({
-    where: { id: pollId, campaignId },
-    select: {
-      status: true,
-      title: true,
-      createdById: true,
-      options: { select: { startsAt: true, votes: { select: { memberId: true } } } },
-    },
-  });
-  if (!poll) {
-    throw new UserError("Poll not found.");
-  }
-  if (poll.status !== "OPEN") {
-    throw new UserError("This poll is closed.");
-  }
-  if (poll.options.some((o) => o.startsAt.getTime() === startsAt.getTime())) {
-    throw new UserError("That date is already in the poll.");
-  }
-  if (poll.options.length >= MAX_POLL_OPTIONS) {
-    throw new UserError(`This poll already has the maximum of ${MAX_POLL_OPTIONS} dates.`);
-  }
-
-  try {
-    await prisma.datePollOption.create({
-      data: {
-        pollId,
-        startsAt,
-        addedById: membership.userId,
-        // Only players vote; the DM's dates are by definition ones they can make.
-        ...(membership.role === "PLAYER"
-          ? { votes: { create: { memberId: membership.id, choice: "YES" } } }
-          : {}),
-      },
-    });
-  } catch (e) {
-    // Two people adding the same date at once: the unique index catches it.
-    if ((e as { code?: string }).code === "P2002") {
-      throw new UserError("That date is already in the poll.");
-    }
-    throw e;
-  }
-
-  const voterMemberIds = new Set(poll.options.flatMap((o) => o.votes.map((v) => v.memberId)));
-  const voters = await prisma.campaignMember.findMany({
-    where: { id: { in: [...voterMemberIds] } },
-    select: { userId: true },
-  });
-  const recipients = new Set([...voters.map((v) => v.userId), poll.createdById]);
-  recipients.delete(membership.userId);
-
-  if (recipients.size > 0) {
-    await notifyCampaignMembers(campaignId, {
-      type: "DATE_POLL_OPENED",
-      title: "New date added to the poll",
-      body: `${await formatSessionDateTime(startsAt)}${poll.title ? ` — ${poll.title}` : ""}`,
-      link: `/campaigns/${campaignId}/polls/${pollId}`,
-      onlyUserIds: [...recipients],
-    });
-  }
-
+  await addPollDate({ campaignId, pollId, membership, startsAt: parsed.data.startsAt });
   revalidatePoll(campaignId, pollId);
 }
 

@@ -73,6 +73,22 @@ export const modalSubmit = (discordId: string, customId: string, reason: string)
   data: { custom_id: customId, components: [{ type: 18, id: 1, component: { type: 4, id: 2, custom_id: "reason", value: reason } }] },
 });
 
+/** A submitted pop-up with several text boxes, in the current Label format. */
+export const modalSubmitValues = (discordId: string, customId: string, values: Record<string, string>) => ({
+  type: 5,
+  guild_id: GUILD,
+  channel_id: CHANNEL,
+  ...who(discordId),
+  data: {
+    custom_id: customId,
+    components: Object.entries(values).map(([id, value], i) => ({
+      type: 18,
+      id: i * 2 + 1,
+      component: { type: 4, id: i * 2 + 2, custom_id: id, value },
+    })),
+  },
+});
+
 export type FakeDiscordRequest = { method: string; path: string; body: Record<string, unknown> | null };
 
 /** Discord's REST API, as far as the bot uses it: records every request. */
