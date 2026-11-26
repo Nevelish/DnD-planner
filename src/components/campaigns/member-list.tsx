@@ -32,7 +32,8 @@ export function MemberList({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  function handleRemove(memberId: string) {
+  function handleRemove(memberId: string, name: string) {
+    if (!window.confirm(`Remove ${name} from the campaign? They won't be able to rejoin until you allow them back.`)) return;
     startTransition(async () => {
       try {
         await removeMember(campaignId, memberId);
@@ -91,8 +92,9 @@ export function MemberList({
                   variant="ghost"
                   size="icon"
                   disabled={isPending}
-                  onClick={() => handleRemove(member.id)}
+                  onClick={() => handleRemove(member.id, member.user.name ?? member.user.email ?? "this player")}
                   title="Remove from campaign"
+                  aria-label={`Remove ${member.user.name ?? member.user.email ?? "player"}`}
                 >
                   <UserMinusIcon className="text-destructive" />
                 </Button>

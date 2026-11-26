@@ -14,7 +14,9 @@ import, and in-app notifications.
 - **Per-campaign roles** — the same account can DM one campaign and play in
   another.
 - **Campaigns**: create, invite players via a shareable link or invite code
-  (paste either into "Join campaign"), join/leave.
+  (paste either into "Join campaign"), join/leave. Someone the DM removes
+  stays out (no rejoining with the invite link or from Discord) until the
+  DM allows them back from the Members page.
 - **Sessions & RSVP**: the DM proposes a date, players respond Yes/Maybe/No.
   Backing out after saying Yes asks for a quick reason, visible to the whole
   party.
@@ -71,7 +73,8 @@ import, and in-app notifications.
   so far, and says which date was picked. Backing out after a Yes asks for a reason in a
   pop-up. Someone who isn't in the campaign yet gets a link to join once
   with their Discord account; or the DM can let anyone in the channel join
-  just by answering. See [Discord bot](#discord-bot) below to set it up.
+  just by answering (their account takes their Discord name and picture).
+  See [Discord bot](#discord-bot) below to set it up.
 - **Notification settings**: each person picks which events show up in
   their bell and which ones @mention them on Discord (e.g. keep reminders,
   skip every RSVP change). Everything is on until you switch it off.

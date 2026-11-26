@@ -10,7 +10,7 @@ import { campaignSchema, discordWebhookSettingsSchema } from "@/lib/validations/
 import { createNotification } from "@/lib/notifications";
 import { postToDiscordWebhook } from "@/lib/discordWebhook";
 import { UserError } from "@/lib/userError";
-import { addPlayerToCampaign } from "@/lib/membership";
+import { addPlayerToCampaign, recordRemoval } from "@/lib/membership";
 
 export async function createCampaign(formData: FormData) {
   const userId = await requireUserId();
@@ -132,13 +132,29 @@ export async function leaveCampaign(campaignId: string) {
   revalidatePath("/campaigns");
 }
 
+/** The DM removes a player. They stay out (no rejoining by invite link or
+ * from Discord) until the DM allows them back. */
 export async function removeMember(campaignId: string, memberId: string) {
   const dm = await requireDM(campaignId);
   if (dm.id === memberId) {
     throw new UserError("The DM can't remove themselves from the campaign.");
   }
 
+  const member = await prisma.campaignMember.findFirst({
+    where: { id: memberId, campaignId },
+    select: { userId: true },
+  });
+  if (!member) throw new UserError("They're not in this campaign any more.");
   await prisma.campaignMember.delete({ where: { id: memberId } });
+  await recordRemoval(campaignId, member.userId);
+  revalidatePath(`/campaigns/${campaignId}/members`);
+}
+
+/** Lets someone the DM removed join again (they still need to rejoin). */
+export async function allowBackIntoCampaign(campaignId: string, removalId: string) {
+  await requireDM(campaignId);
+  const { count } = await prisma.campaignRemoval.deleteMany({ where: { id: removalId, campaignId } });
+  if (count === 0) throw new UserError("They can already rejoin.");
   revalidatePath(`/campaigns/${campaignId}/members`);
 }
 

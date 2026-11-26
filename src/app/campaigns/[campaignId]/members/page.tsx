@@ -2,9 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { PUBLIC_USER_SELECT } from "@/lib/publicUser";
 import { requireMembershipForPage } from "@/lib/permissions";
 import { getRequestOrigin } from "@/lib/requestOrigin";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InviteCodeBox } from "@/components/campaigns/invite-code-box";
 import { MemberList } from "@/components/campaigns/member-list";
+import { RemovedPlayers } from "@/components/campaigns/removed-players";
+import { formatDateOnlyForUser, getDateTimePrefs } from "@/lib/sessionDateFormat";
 
 export default async function MembersPage({
   params,
@@ -15,7 +17,7 @@ export default async function MembersPage({
   const { userId, membership } = await requireMembershipForPage(campaignId);
   const isDM = membership.role === "DM";
 
-  const [campaign, members, origin] = await Promise.all([
+  const [campaign, members, origin, removals, prefs] = await Promise.all([
     prisma.campaign.findUniqueOrThrow({ where: { id: campaignId } }),
     prisma.campaignMember.findMany({
       where: { campaignId },
@@ -23,6 +25,14 @@ export default async function MembersPage({
       orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
     }),
     getRequestOrigin(),
+    isDM
+      ? prisma.campaignRemoval.findMany({
+          where: { campaignId },
+          select: { id: true, name: true, removedAt: true },
+          orderBy: { removedAt: "desc" },
+        })
+      : [],
+    getDateTimePrefs(userId),
   ]);
 
   return (
@@ -55,6 +65,27 @@ export default async function MembersPage({
           />
         </CardContent>
       </Card>
+
+      {removals.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Removed players</CardTitle>
+            <CardDescription>
+              They can&apos;t rejoin, with the invite link or from Discord, until you allow them back.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pb-6">
+            <RemovedPlayers
+              campaignId={campaignId}
+              removed={removals.map((r) => ({
+                id: r.id,
+                name: r.name,
+                removedOn: formatDateOnlyForUser(r.removedAt, prefs),
+              }))}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
