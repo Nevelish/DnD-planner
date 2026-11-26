@@ -251,7 +251,13 @@ The tests start the app themselves on port 3100 and expect `psql` on your
 `PATH`. Set `E2E_DATABASE_URL` to use a database other than
 `postgresql://dnd:dnd@localhost:5432/dnd_planner_e2e`. After a failure,
 `npx playwright show-trace test-results/<test>/trace.zip` replays what the
-browser saw.
+browser saw. To use a Chromium you already have instead of Playwright's own, set
+`E2E_CHROMIUM_PATH` to it.
+
+Dependencies are kept current by Dependabot (`.github/dependabot.yml`): a
+weekly pull request each for npm packages, GitHub Actions and the Docker base
+image, with patch and minor updates only, each tested by CI. Major upgrades
+are done by hand.
 
 ## Environment variables
 
