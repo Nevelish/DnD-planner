@@ -3,7 +3,7 @@ import { Prisma, type NotificationType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { getRequestOrigin } from "@/lib/requestOrigin";
-import { addPlayerToCampaign } from "@/lib/membership";
+import { addPlayerToCampaign, isRemovedFromCampaign } from "@/lib/membership";
 import { recordRsvp, rsvpNeedsReason, type RsvpAnswer } from "@/lib/rsvp";
 import { UserError } from "@/lib/userError";
 import { createJoinToken, type JoinTarget } from "@/lib/discord/joinLink";
@@ -11,7 +11,7 @@ import { pollVotePanel, refreshPollMessages } from "@/lib/discord/pollPosts";
 import { saveVotesFromList } from "@/lib/pollVotes";
 
 // What Discord sends: https://discord.com/developers/docs/interactions/receiving-and-responding
-type DiscordUser = { id: string; username: string; global_name?: string | null };
+type DiscordUser = { id: string; username: string; global_name?: string | null; avatar?: string | null };
 type ModalRow = { component?: { custom_id?: string; value?: string }; components?: { custom_id?: string; value?: string }[] };
 export type Interaction = {
   type: number;
@@ -69,11 +69,19 @@ async function plannerUserFor(discordId: string) {
 
 /** For campaigns that allow it: an account made straight from Discord. If
  * they sign in with Discord later, they land in this same account. */
+/** Their Discord profile picture, as Discord serves it, if they have one. */
+function discordAvatarUrl(user: DiscordUser) {
+  return user.avatar && /^(a_)?[0-9a-f]+$/.test(user.avatar)
+    ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
+    : null;
+}
+
 async function createUserFromDiscord(discordUser: DiscordUser, nick?: string | null) {
   try {
     return await prisma.user.create({
       data: {
         name: nick || discordUser.global_name || discordUser.username,
+        image: discordAvatarUrl(discordUser),
         discordUserId: discordUser.id,
         accounts: { create: { type: "oauth", provider: "discord", providerAccountId: discordUser.id } },
       },
@@ -218,6 +226,21 @@ async function memberForClick(
   const discordUser = discordUserOf(interaction);
   let user = await plannerUserFor(discordUser.id);
   if (user?.disabled) return { response: privately("Your planner account has been disabled. Ask your admin.") };
+  if (await isRemovedFromCampaign(campaign.id, { userId: user?.id, discordId: discordUser.id })) {
+    return {
+      response: privately(`The DM removed you from **${campaign.name}**. Ask them if you'd like to rejoin.`),
+    };
+  }
+
+  // Discord-made accounts from before pictures were copied get theirs now.
+  // Only accounts with no picture and no password: never one someone chose.
+  const avatar = discordAvatarUrl(discordUser);
+  if (user && avatar) {
+    await prisma.user.updateMany({
+      where: { id: user.id, image: null, passwordHash: null, avatarUpdatedAt: null },
+      data: { image: avatar },
+    });
+  }
 
   const membership = user
     ? await prisma.campaignMember.findUnique({

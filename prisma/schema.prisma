@@ -64,6 +64,7 @@ model User {
   awayPeriods       AwayPeriod[]
   notebookImages    NotebookImage[]   @relation("NotebookImages")
   uploadedImages    NotebookImage[]   @relation("NotebookImagesUploaded")
+  campaignRemovals  CampaignRemoval[]
   notebookPages     NotebookPage[]    @relation("NotebookPages")
   notebookPagesMade NotebookPage[]    @relation("NotebookPagesCreated")
   safetyEntries     SafetyEntry[]
@@ -148,6 +149,7 @@ model Campaign {
   safetyEntries    SafetyEntry[]
   notebookPages    NotebookPage[]
   notebookImages   NotebookImage[]
+  removals         CampaignRemoval[]
 }
 
 model CampaignMember {
@@ -563,4 +565,24 @@ model NotebookImage {
   uploadedBy User?    @relation("NotebookImagesUploaded", fields: [uploadedById], references: [id], onDelete: SetNull)
 
   @@index([campaignId, kind, ownerId])
+}
+
+/// Someone the DM removed from a campaign. Until the DM allows them back,
+/// they can't rejoin: not with the invite link, a Discord button, or the
+/// Discord join link. The Discord id is kept too, so even a new account made
+/// from the same Discord account stays out. Leaving on your own isn't a
+/// removal.
+model CampaignRemoval {
+  id         String   @id @default(cuid())
+  campaignId String
+  userId     String?
+  discordId  String?
+  name       String // shown to the DM, even if the account is deleted later
+  removedAt  DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([campaignId, userId])
+  @@index([campaignId, discordId])
 }
