@@ -7,7 +7,17 @@ import { addPlayerToCampaign, isRemovedFromCampaign } from "@/lib/membership";
 import { recordRsvp, rsvpNeedsReason, type RsvpAnswer } from "@/lib/rsvp";
 import { UserError } from "@/lib/userError";
 import { createJoinToken, type JoinTarget } from "@/lib/discord/joinLink";
-import { pollVotePanel, refreshPollMessages, usualPollTime } from "@/lib/discord/pollPosts";
+import {
+  pollMessage,
+  pollVoteButtonId,
+  pollVotePanel,
+  postPollMessage,
+  refreshPollMessages,
+  usualPollTime,
+} from "@/lib/discord/pollPosts";
+import { postSessionMessage, sessionMessage } from "@/lib/discord/sessionPosts";
+import { groupDay, loadCampaignAway } from "@/lib/away";
+import { awayOn } from "@/lib/awayDays";
 import { addPollDate } from "@/lib/pollOptions";
 import { readDateAndTime } from "@/lib/dateInput";
 import { getServerTimeZone } from "@/lib/timezone";
@@ -16,6 +26,7 @@ import { saveVotesFromList } from "@/lib/pollVotes";
 // What Discord sends: https://discord.com/developers/docs/interactions/receiving-and-responding
 type DiscordUser = { id: string; username: string; global_name?: string | null; avatar?: string | null };
 type ModalRow = { component?: { custom_id?: string; value?: string }; components?: { custom_id?: string; value?: string }[] };
+type CommandOption = { name: string; type?: number; value?: unknown; options?: CommandOption[] };
 export type Interaction = {
   type: number;
   channel_id?: string;
@@ -24,7 +35,7 @@ export type Interaction = {
   user?: DiscordUser;
   data?: {
     name?: string;
-    options?: { name: string }[];
+    options?: CommandOption[];
     custom_id?: string;
     values?: string[]; // what was picked in a dropdown
     components?: ModalRow[];
@@ -104,8 +115,15 @@ export async function handleInteraction(interaction: Interaction): Promise<unkno
     if (interaction.type === InteractionType.PING) return { type: Callback.PONG };
 
     const customId = interaction.data?.custom_id ?? "";
-    if (interaction.type === InteractionType.COMMAND && interaction.data?.name === "planner") {
-      if (interaction.data.options?.[0]?.name === "connect") return await connectCommand(interaction);
+    if (interaction.type === InteractionType.COMMAND) {
+      const command = interaction.data?.name;
+      if (command === "next") return await nextCommand(interaction);
+      if (command === "poll") return await pollCommand(interaction);
+      if (command === "planner") {
+        const sub = interaction.data?.options?.[0]?.name;
+        if (sub === "connect") return await connectCommand(interaction);
+        if (sub === "nudge") return await nudgeCommand(interaction);
+      }
     }
     if (interaction.type === InteractionType.COMPONENT) {
       const [kind, id, status] = customId.split(":");
@@ -457,4 +475,182 @@ async function pollSuggestSubmit(interaction: Interaction, pollId: string) {
   const panel = await pollVotePanel(pollId, player.membership.id, notice);
   if (!panel) return { type: Callback.UPDATE_MESSAGE, data: { content: notice, components: [] } };
   return { type: Callback.UPDATE_MESSAGE, data: { content: panel.content, components: panel.components } };
+}
+
+// ---------- /next, /poll, /planner nudge ----------
+
+const NOT_CONNECTED = "This channel isn't connected to a campaign. The DM can connect it with `/planner connect`.";
+
+/** The campaign whose posts go to this channel (preferring one the person
+ * is in, should two campaigns share a channel). */
+async function campaignForChannel(interaction: Interaction) {
+  if (!interaction.channel_id) return null;
+  const campaigns = await prisma.campaign.findMany({
+    where: { discordChannelId: interaction.channel_id },
+    select: { id: true, name: true },
+    orderBy: { createdAt: "asc" },
+  });
+  if (campaigns.length <= 1) return campaigns[0] ?? null;
+  const user = await plannerUserFor(discordUserOf(interaction).id);
+  const mine = user
+    ? await prisma.campaignMember.findFirst({
+        where: { userId: user.id, campaignId: { in: campaigns.map((c) => c.id) } },
+        select: { campaignId: true },
+      })
+    : null;
+  return campaigns.find((c) => c.id === mine?.campaignId) ?? campaigns[0];
+}
+
+const wantsToShare = (interaction: Interaction) =>
+  interaction.data?.options?.some((o) => o.name === "share" && o.value === true) ?? false;
+
+const nextSessionOf = (campaignId: string) =>
+  prisma.sessionProposal.findFirst({
+    where: { campaignId, status: { in: ["PROPOSED", "CONFIRMED"] }, startsAt: { gt: new Date() } },
+    orderBy: { startsAt: "asc" },
+    select: { id: true, title: true, startsAt: true },
+  });
+
+const openPollOf = (campaignId: string) =>
+  prisma.datePoll.findFirst({
+    where: { campaignId, status: "OPEN" },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, title: true },
+  });
+
+/** /next: the next session, privately, with RSVP buttons. With `share`,
+ * posted to the channel as a post that keeps itself up to date. */
+async function nextCommand(interaction: Interaction) {
+  const campaign = await campaignForChannel(interaction);
+  if (!campaign) return privately(NOT_CONNECTED);
+  const session = await nextSessionOf(campaign.id);
+  if (!session) {
+    const poll = await openPollOf(campaign.id);
+    return privately(
+      `No session is planned for **${campaign.name}** yet.` +
+        (poll ? " There's a date poll open, though: `/poll` brings it up." : ""),
+    );
+  }
+
+  const announcement = {
+    title: "Next session",
+    url: `${await getRequestOrigin()}/campaigns/${campaign.id}/sessions/${session.id}`,
+  };
+  if (wantsToShare(interaction)) {
+    void postSessionMessage({ channelId: interaction.channel_id!, sessionId: session.id, embed: announcement });
+    return privately("Posted it in the channel.");
+  }
+  const message = await sessionMessage(session.id, announcement);
+  if (!message) return privately("That session doesn't exist any more.");
+  return { type: Callback.MESSAGE, data: { ...message, flags: EPHEMERAL, allowed_mentions: { parse: [] } } };
+}
+
+/** /poll: the open date poll, privately, with its Vote button. With
+ * `share`, posted to the channel as a post that keeps itself up to date. */
+async function pollCommand(interaction: Interaction) {
+  const campaign = await campaignForChannel(interaction);
+  if (!campaign) return privately(NOT_CONNECTED);
+  const poll = await openPollOf(campaign.id);
+  if (!poll) return privately(`There's no date poll open for **${campaign.name}** right now.`);
+
+  const announcement = {
+    title: "Which date works for you?",
+    url: `${await getRequestOrigin()}/campaigns/${campaign.id}/polls/${poll.id}`,
+  };
+  if (wantsToShare(interaction)) {
+    void postPollMessage({ channelId: interaction.channel_id!, pollId: poll.id, embed: announcement });
+    return privately("Posted it in the channel.");
+  }
+  const message = await pollMessage(poll.id, announcement);
+  if (!message) return privately("That poll doesn't exist any more.");
+  return { type: Callback.MESSAGE, data: { ...message, flags: EPHEMERAL, allowed_mentions: { parse: [] } } };
+}
+
+/**
+ * /planner nudge (DM only): a message in the channel that @mentions only
+ * the players who haven't answered the next session (leaving out anyone
+ * away that day) or haven't voted in the open poll, with the buttons to
+ * answer right there.
+ */
+async function nudgeCommand(interaction: Interaction) {
+  const campaign = await campaignForChannel(interaction);
+  if (!campaign) return privately(NOT_CONNECTED);
+  const user = await plannerUserFor(discordUserOf(interaction).id);
+  const dm =
+    user && !user.disabled
+      ? await prisma.campaignMember.findFirst({ where: { campaignId: campaign.id, userId: user.id, role: "DM" } })
+      : null;
+  if (!dm) return privately("Only the campaign's DM can nudge players.");
+
+  const [players, session, poll] = await Promise.all([
+    prisma.campaignMember.findMany({
+      where: { campaignId: campaign.id, role: "PLAYER" },
+      orderBy: { joinedAt: "asc" },
+      select: { id: true, userId: true, user: { select: { name: true, email: true, discordUserId: true } } },
+    }),
+    nextSessionOf(campaign.id),
+    openPollOf(campaign.id),
+  ]);
+  const nameOf = (p: (typeof players)[number]) => p.user.name ?? p.user.email ?? "Someone";
+
+  let sessionWaiting: typeof players = [];
+  if (session) {
+    const answered = new Set(
+      (
+        await prisma.rsvp.findMany({
+          where: { sessionProposalId: session.id, status: { not: "PENDING" } },
+          select: { memberId: true },
+        })
+      ).map((r) => r.memberId),
+    );
+    const away = new Set(awayOn(await loadCampaignAway(campaign.id), groupDay(session.startsAt)).map((a) => a.userId));
+    sessionWaiting = players.filter((p) => !answered.has(p.id) && !away.has(p.userId));
+  }
+  let pollWaiting: typeof players = [];
+  if (poll) {
+    const voted = new Set(
+      (
+        await prisma.datePollVote.findMany({ where: { option: { pollId: poll.id } }, select: { memberId: true } })
+      ).map((v) => v.memberId),
+    );
+    pollWaiting = players.filter((p) => !voted.has(p.id));
+  }
+  if (!session && !poll) return privately("There's no upcoming session or open poll to nudge about.");
+  if (sessionWaiting.length === 0 && pollWaiting.length === 0) {
+    return privately("Everyone has answered. Nothing to nudge.");
+  }
+
+  const origin = await getRequestOrigin();
+  const lines: string[] = [];
+  const components: unknown[] = [];
+  if (session && sessionWaiting.length) {
+    lines.push(
+      `**${session.title || "Next session"}**, ${when(session.startsAt)}`,
+      `Not answered yet: ${sessionWaiting.map(nameOf).join(", ")}`,
+    );
+    const message = await sessionMessage(session.id, {
+      title: "Next session",
+      url: `${origin}/campaigns/${campaign.id}/sessions/${session.id}`,
+    });
+    components.push(...(message?.components ?? []));
+  }
+  if (poll && pollWaiting.length) {
+    if (lines.length) lines.push("");
+    lines.push(`**Date poll: ${poll.title || "Find a date for the next session"}**`, `Not voted yet: ${pollWaiting.map(nameOf).join(", ")}`);
+    components.push({
+      type: 1,
+      components: [{ type: 2, style: 1, label: "Vote on dates", custom_id: pollVoteButtonId(poll.id) }],
+    });
+  }
+
+  const nudged = [...new Set([...sessionWaiting, ...pollWaiting].map((p) => p.user.discordUserId).filter((id): id is string => !!id))];
+  return {
+    type: Callback.MESSAGE,
+    data: {
+      content: `${nudged.map((id) => `<@${id}>`).join(" ")}${nudged.length ? " " : ""}The DM is waiting for your answer:`,
+      embeds: [{ title: "Still waiting on you", description: lines.join("\n"), color: 0xe0a33a, footer: { text: campaign.name } }],
+      components,
+      allowed_mentions: { parse: [], users: nudged },
+    },
+  };
 }

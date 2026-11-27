@@ -114,6 +114,13 @@ async function pollCard(pollId: string, announcement: Pick<DiscordEmbed, "title"
   return { embed, components: buttons.length ? [{ type: 1, components: buttons }] : [] };
 }
 
+/** A poll's card and Vote button, as a message body, for replies that
+ * aren't stored posts (e.g. /poll). */
+export async function pollMessage(pollId: string, announcement: Pick<DiscordEmbed, "title" | "url">) {
+  const card = await pollCard(pollId, announcement);
+  return card ? { embeds: [card.embed], components: card.components } : null;
+}
+
 /** Posts a new date poll to the campaign's channel as the bot, and remembers
  * the message so its counts can be kept up to date. */
 export async function postPollMessage(input: {

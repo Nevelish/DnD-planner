@@ -64,18 +64,52 @@ export async function discordApi<T = unknown>(
   }
 }
 
-/** The slash command the DM runs in a channel to have the bot post there. */
+// The bot's slash commands. They work in the channel a campaign is connected
+// to, and are about that campaign.
 const COMMANDS = [
+  {
+    name: "next",
+    description: "The next session: when, where, and who's coming",
+    type: 1, // CHAT_INPUT
+    contexts: [0], // servers only
+    options: [
+      {
+        type: 5, // BOOLEAN
+        name: "share",
+        description: "Post it for everyone in the channel (otherwise only you see it)",
+        required: false,
+      },
+    ],
+  },
+  {
+    name: "poll",
+    description: "The open date poll, with its Vote button",
+    type: 1,
+    contexts: [0],
+    options: [
+      {
+        type: 5, // BOOLEAN
+        name: "share",
+        description: "Post it for everyone in the channel (otherwise only you see it)",
+        required: false,
+      },
+    ],
+  },
   {
     name: "planner",
     description: "DnD Planner",
-    type: 1, // CHAT_INPUT
-    contexts: [0], // servers only
+    type: 1,
+    contexts: [0],
     options: [
       {
         type: 1, // SUB_COMMAND
         name: "connect",
         description: "Post your campaign's sessions in this channel, with RSVP buttons",
+      },
+      {
+        type: 1,
+        name: "nudge",
+        description: "DM only: remind players who haven't answered the next session or the poll",
       },
     ],
   },

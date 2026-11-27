@@ -205,6 +205,14 @@ export async function replyToSessionMessage(input: {
   return true;
 }
 
+/** A session's card and buttons, as a message body, for replies that
+ * aren't stored posts (e.g. /next). */
+export async function sessionMessage(sessionId: string, announcement: Pick<DiscordEmbed, "title" | "url">) {
+  const card = await sessionCard(sessionId, announcement);
+  if (!card) return null;
+  return { embeds: [card.embed], components: card.open ? rsvpButtons(sessionId, announcement.url) : [] };
+}
+
 /** The session id in an in-app link like /campaigns/abc/sessions/xyz. */
 export function sessionIdFromLink(link: string | undefined): string | null {
   return link?.match(/\/sessions\/([^/?#]+)$/)?.[1] ?? null;

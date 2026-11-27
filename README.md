@@ -314,6 +314,17 @@ whose planner account is linked to Discord can answer right away. Anyone else
 gets a private link to join with their Discord account once, unless the DM
 turns on **Let anyone in the channel join by answering** in Settings.
 
+Commands, in a connected channel:
+
+| Command | Who | What it does |
+|---|---|---|
+| `/next` | anyone | The next session (when, where, who's coming) with RSVP buttons, shown only to you. `share: True` posts it in the channel instead, as a post that keeps itself up to date. |
+| `/poll` | anyone | The open date poll with its Vote button. `share: True` posts it in the channel. |
+| `/planner nudge` | the DM | Posts a reminder that @mentions only the players who haven't answered the next session (leaving out anyone away that day) or haven't voted in the open poll, with buttons to answer right there. |
+| `/planner connect` | the DM | Connects a campaign to the channel (see above). |
+
+New commands show up in Discord after the app restarts with the update.
+
 ## Notes on the D&D Beyond integration
 
 D&D Beyond has no official public API. Linking a character fetches from the
