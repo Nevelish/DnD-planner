@@ -49,6 +49,20 @@ export const connectCommand = (discordId: string, channel = CHANNEL) => ({
   data: { name: "planner", type: 1, options: [{ name: "connect", type: 1 }] },
 });
 
+/** A slash command, e.g. slashCommand(id, "next", [{ name: "share", type: 5, value: true }]). */
+export const slashCommand = (
+  discordId: string,
+  name: string,
+  options: { name: string; type: number; value?: unknown }[] = [],
+  channel = CHANNEL,
+) => ({
+  type: 2,
+  guild_id: GUILD,
+  channel_id: channel,
+  ...who(discordId),
+  data: { name, type: 1, options },
+});
+
 export const buttonClick = (discordId: string, customId: string, { channel = CHANNEL, name }: { channel?: string; name?: string } = {}) => ({
   type: 3,
   guild_id: GUILD,
