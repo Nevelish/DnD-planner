@@ -16,18 +16,23 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { errorMessage } from "@/lib/userError";
+import { useRefreshBell } from "@/components/notifications/use-refresh-bell";
 
 export function ClearAllNotificationsButton() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const refreshBell = useRefreshBell();
 
   function handleClear() {
     startTransition(async () => {
       try {
         await clearAllNotifications();
         setOpen(false);
+        toast.success("Notifications cleared.");
         router.refresh();
+        // The bell in the header keeps its own copy; update it too.
+        await refreshBell();
       } catch (e) {
         toast.error(errorMessage(e));
       }
