@@ -11,6 +11,7 @@ import {
   unreadNotificationCount,
 } from "@/lib/actions/notification";
 import { Button } from "@/components/ui/button";
+import { BELL_COUNT_KEY, BELL_LIST_KEY } from "@/components/notifications/use-refresh-bell";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -23,12 +24,12 @@ import {
 
 export function NotificationBell() {
   const { data: count, mutate: mutateCount } = useSWR(
-    "unread-notification-count",
+    BELL_COUNT_KEY,
     unreadNotificationCount,
     { refreshInterval: 30_000 },
   );
   const { data: notifications, mutate: mutateList } = useSWR(
-    "recent-notifications",
+    BELL_LIST_KEY,
     () => listNotifications(10),
   );
 
@@ -51,7 +52,12 @@ export function NotificationBell() {
   return (
     <DropdownMenu onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="relative">
+        <Button
+          variant="outline"
+          size="icon"
+          className="relative"
+          aria-label={count ? `Notifications, ${count} unread` : "Notifications"}
+        >
           <BellIcon />
           {!!count && count > 0 && (
             <Badge
@@ -63,7 +69,13 @@ export function NotificationBell() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
+      {/* Never taller than the room below the bell: the list scrolls, and the
+          heading and "View all" stay put (on a small laptop screen, ten
+          notifications don't fit). */}
+      <DropdownMenuContent
+        align="end"
+        className="flex max-h-(--radix-dropdown-menu-content-available-height) w-80 flex-col"
+      >
         <DropdownMenuLabel className="flex items-center justify-between">
           Notifications
           {!!count && count > 0 && (
@@ -76,29 +88,31 @@ export function NotificationBell() {
           )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {!notifications || notifications.length === 0 ? (
-          <p className="px-2 py-4 text-center text-sm text-muted-foreground">
-            You&apos;re all caught up.
-          </p>
-        ) : (
-          notifications.map((n) => (
-            <DropdownMenuItem
-              key={n.id}
-              asChild
-              className="flex-col items-start gap-0.5"
-              onSelect={() => handleItemClick(n.id)}
-            >
-              <Link href={n.link ?? "/notifications"}>
-                <span className={n.isRead ? "font-normal" : "font-semibold"}>
-                  {n.title}
-                </span>
-                {n.body && (
-                  <span className="text-xs text-muted-foreground">{n.body}</span>
-                )}
-              </Link>
-            </DropdownMenuItem>
-          ))
-        )}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {!notifications || notifications.length === 0 ? (
+            <p className="px-2 py-4 text-center text-sm text-muted-foreground">
+              You&apos;re all caught up.
+            </p>
+          ) : (
+            notifications.map((n) => (
+              <DropdownMenuItem
+                key={n.id}
+                asChild
+                className="flex-col items-start gap-0.5"
+                onSelect={() => handleItemClick(n.id)}
+              >
+                <Link href={n.link ?? "/notifications"}>
+                  <span className={n.isRead ? "font-normal" : "font-semibold"}>
+                    {n.title}
+                  </span>
+                  {n.body && (
+                    <span className="line-clamp-2 text-xs text-muted-foreground">{n.body}</span>
+                  )}
+                </Link>
+              </DropdownMenuItem>
+            ))
+          )}
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/notifications" className="justify-center text-sm">
