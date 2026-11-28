@@ -84,7 +84,8 @@ async function previouslyOn(campaignId: string, before: Date) {
   if (!last || !short) return null;
 
   const origin = await getRequestOrigin().catch(() => null);
-  const name = `${last.title || "Last session"} (<t:${Math.floor(last.startsAt.getTime() / 1000)}:D>)`;
-  const heading = origin ? `[${name}](${origin}/campaigns/${campaignId}/sessions/${last.id})` : name;
+  // The date stays outside the link: Discord doesn't render timestamps in link text.
+  const name = last.title || "Last session";
+  const heading = `${origin ? `[${name}](${origin}/campaigns/${campaignId}/sessions/${last.id})` : name} · <t:${Math.floor(last.startsAt.getTime() / 1000)}:D>`;
   return { short, discord: `**Previously on…** ${heading}\n> ${recapExcerpt(last.recap!, 400)}` };
 }

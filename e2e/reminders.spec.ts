@@ -57,7 +57,7 @@ test("the reminder starts with the latest recap from before the session", async 
   await expect.poll(() => reminderPost("Session 4: The Chase"), { timeout: 10_000 }).toBeTruthy();
   const post = JSON.parse(reminderPost("Session 4: The Chase")!) as { embeds: { description: string }[] };
   expect(post.embeds[0].description).toMatch(
-    new RegExp(`\\n\\n\\*\\*Previously on…\\*\\* \\[Session 2: The Heist \\(<t:\\d+:D>\\)\\]\\(http://localhost:\\d+/campaigns/${cid}/sessions/last\\)\\n> ${teaser}$`),
+    new RegExp(`\\n\\n\\*\\*Previously on…\\*\\* \\[Session 2: The Heist\\]\\(http://localhost:\\d+/campaigns/${cid}/sessions/last\\) · <t:\\d+:D>\\n> ${teaser}$`),
   );
 
   // In the app, the teaser is on its own line.
