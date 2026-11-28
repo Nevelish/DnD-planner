@@ -106,7 +106,7 @@ export function NotificationBell() {
                     {n.title}
                   </span>
                   {n.body && (
-                    <span className="line-clamp-2 text-xs text-muted-foreground">{n.body}</span>
+                    <span className="line-clamp-2 whitespace-pre-line text-xs text-muted-foreground">{n.body}</span>
                   )}
                 </Link>
               </DropdownMenuItem>

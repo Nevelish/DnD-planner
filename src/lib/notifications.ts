@@ -101,6 +101,8 @@ async function notifyDiscord(
     type: NotificationType;
     title: string;
     body?: string;
+    /** The body as Discord shows it, if it differs (e.g. with markdown). */
+    discordBody?: string;
     link?: string;
     color?: number;
     /** Limit @mentions to these users instead of everyone in the campaign. */
@@ -155,11 +157,12 @@ async function notifyDiscord(
   const url = input.link ? `${origin}${input.link}` : undefined;
   const color = input.color ?? DEFAULT_DISCORD_EMBED_COLORS[input.type];
   const timestamp = new Date().toISOString();
+  const body = input.discordBody ?? input.body;
 
   if (useBot) {
     const embed = {
       title: input.title,
-      description: input.body || undefined,
+      description: body || undefined,
       url,
       color,
       footer: { text: campaign.name },
@@ -179,7 +182,7 @@ async function notifyDiscord(
 
   void postToDiscordWebhook(campaign.discordWebhookUrl!, {
     title: input.title,
-    body: input.body,
+    body,
     url,
     color,
     footerText: campaign.name,
@@ -220,6 +223,8 @@ export async function notifyCampaignMembers(
     type: NotificationType;
     title: string;
     body?: string;
+    /** The body as Discord shows it, if it differs (e.g. with markdown). */
+    discordBody?: string;
     link?: string;
     excludeUserId?: string;
     onlyUserIds?: string[];

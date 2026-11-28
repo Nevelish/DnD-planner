@@ -1,7 +1,9 @@
 import { sendDueReminders } from "@/lib/sessionReminders";
 
-const CHECK_INTERVAL_MS = 5 * 60_000;
-const FIRST_CHECK_DELAY_MS = 15_000;
+// Every five minutes; the end-to-end tests set a shorter interval so they
+// don't have to wait for a reminder.
+const CHECK_INTERVAL_MS = Number(process.env.REMINDER_CHECK_INTERVAL_MS) || 5 * 60_000;
+const FIRST_CHECK_DELAY_MS = Math.min(15_000, CHECK_INTERVAL_MS);
 
 const scheduler = globalThis as typeof globalThis & {
   __sessionReminderTimer?: ReturnType<typeof setInterval>;
