@@ -52,6 +52,8 @@ export default defineConfig({
       NEXTAUTH_URL: E2E_BASE_URL,
       NEXTAUTH_SECRET: "e2e-test-secret-not-for-production",
       TZ: "Europe/Oslo",
+      // Look for due session reminders every two seconds, not every five minutes.
+      REMINDER_CHECK_INTERVAL_MS: "2000",
       // The Discord bot, talking to a fake Discord the tests run (e2e/discord.ts).
       DISCORD_CLIENT_ID: DISCORD_TEST_APP_ID,
       DISCORD_PUBLIC_KEY: DISCORD_TEST_PUBLIC_KEY,

@@ -62,8 +62,9 @@ import, and in-app notifications.
 - **Notifications**: in-app bell + full history for invites, proposals,
   reschedules, confirmations, cancellations, and RSVP changes.
 - **Reminders**: an in-app (and optional Discord) reminder 24 hours before
-  each session, to the DM and everyone who hasn't said No, plus a
-  calendar-app alert an hour before via the .ics feed. Set `TZ` (e.g.
+  each session, to the DM and everyone who hasn't said No, with a "previously
+  on…" teaser from the latest recap (on Discord, linked to the full recap),
+  plus a calendar-app alert an hour before via the .ics feed. Set `TZ` (e.g.
   `Europe/Oslo`) so reminder times read in your group's timezone.
 - **RSVP and vote from Discord** (optional bot): session posts in your
   Discord channel get **I'm in / Maybe / Can't make it** buttons, and the

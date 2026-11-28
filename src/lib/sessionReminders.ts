@@ -5,6 +5,8 @@ import { notifyCampaignMembers } from "@/lib/notifications";
 import { formatSessionDateTimeInTimeZone } from "@/lib/sessionDateFormat";
 import { placeSuffix } from "@/lib/sessionPlace";
 import { getServerTimeZone } from "@/lib/timezone";
+import { getRequestOrigin } from "@/lib/requestOrigin";
+import { recapExcerpt } from "@/lib/recap";
 
 const REMINDER_LEAD_MS = 24 * 60 * 60_000;
 
@@ -53,12 +55,36 @@ export async function sendDueReminders() {
       .map((m) => m.userId);
     if (recipients.length === 0) continue;
 
+    const when = `${formatSessionDateTimeInTimeZone(session.startsAt, getServerTimeZone())}${placeSuffix(session.format, session.location)} — ${session.campaign.name}`;
+    const previously = await previouslyOn(session.campaignId, session.startsAt);
     await notifyCampaignMembers(session.campaignId, {
       type: "SESSION_REMINDER",
       title: `Reminder: ${session.title || "session"} coming up`,
-      body: `${formatSessionDateTimeInTimeZone(session.startsAt, getServerTimeZone())}${placeSuffix(session.format, session.location)} — ${session.campaign.name}`,
+      body: previously ? `${when}\nPreviously on…: ${previously.short}` : when,
+      discordBody: previously ? `${when}\n\n${previously.discord}` : when,
       link: `/campaigns/${session.campaignId}/sessions/${session.id}`,
       onlyUserIds: recipients,
     });
   }
+}
+
+/**
+ * A "previously on…" teaser for a reminder: the start of the latest recap
+ * written before this session, so everyone remembers where things left off.
+ * That's usually last session's; if nobody wrote one, an older one (Discord
+ * says which session it's from). Null if there's no recap yet.
+ */
+async function previouslyOn(campaignId: string, before: Date) {
+  const last = await prisma.sessionProposal.findFirst({
+    where: { campaignId, status: "COMPLETED", startsAt: { lt: before }, recap: { not: null } },
+    orderBy: { startsAt: "desc" },
+    select: { id: true, title: true, startsAt: true, recap: true },
+  });
+  const short = recapExcerpt(last?.recap ?? "", 160);
+  if (!last || !short) return null;
+
+  const origin = await getRequestOrigin().catch(() => null);
+  const name = `${last.title || "Last session"} (<t:${Math.floor(last.startsAt.getTime() / 1000)}:D>)`;
+  const heading = origin ? `[${name}](${origin}/campaigns/${campaignId}/sessions/${last.id})` : name;
+  return { short, discord: `**Previously on…** ${heading}\n> ${recapExcerpt(last.recap!, 400)}` };
 }

@@ -47,7 +47,7 @@ export default async function NotificationsPage() {
                   </span>
                 </div>
                 {n.body && (
-                  <span className="text-sm text-muted-foreground">{n.body}</span>
+                  <span className="whitespace-pre-line text-sm text-muted-foreground">{n.body}</span>
                 )}
               </Link>
             ))}

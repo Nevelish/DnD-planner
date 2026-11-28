@@ -4,8 +4,11 @@ export function recapExcerpt(markdown: string, max = 200): string {
   const text = markdown
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/!\[[^\]]*\]\([^)]*\)/g, " ") // images
+    .replace(/\[\[([^\]|\n]*)\|([^\]\n]*)\]\]/g, "$2") // [[Page|label]] → label
+    .replace(/\[\[([^\]\n]*)\]\]/g, "$1") // [[Page]] → Page
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1") // links → their text
     .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+/gm, "") // headings, quotes, list markers
+    .replace(/^\[[ xX]\]\s+/gm, "") // checkboxes
     .replace(/[*_~`]+/g, "")
     .replace(/\s+/g, " ")
     .trim();
